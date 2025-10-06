@@ -17,7 +17,6 @@ If your changes affect the UI, please add screenshots or a GIF to show the impac
 
 ## 🎯 Definition of Done Checklist
 
-- [ ] All acceptance criteria for the linked user story have been met.
 - [ ] A self-review of the code has been performed.
 - [ ] The code follows the style guidelines of this project.
 - [ ] New and existing unit tests pass locally with my changes.
