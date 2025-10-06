@@ -1,4 +1,4 @@
 package Singheatlh.springboot_backend.repository;
 
-public class ClinicRepository {
+public interface ClinicRepository {
 }
