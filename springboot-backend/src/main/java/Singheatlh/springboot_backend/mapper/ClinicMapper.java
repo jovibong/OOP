@@ -1,5 +1,7 @@
 package Singheatlh.springboot_backend.mapper;
 
+import org.springframework.stereotype.Component;
+
 import Singheatlh.springboot_backend.dto.ClinicDto;
 import Singheatlh.springboot_backend.entity.Clinic;
 import org.springframework.stereotype.Component;
@@ -7,7 +9,11 @@ import org.springframework.stereotype.Component;
 @Component
 public class ClinicMapper {
 
-    public static ClinicDto mapToClinicDto(Clinic clinic) {
+    public ClinicDto toDto(Clinic clinic) {
+        if (clinic == null) {
+            return null;
+        }
+
         return new ClinicDto(
                 clinic.getClinicId(),
                 clinic.getName(),
@@ -19,7 +25,11 @@ public class ClinicMapper {
         );
     }
 
-    public static Clinic mapToClinic(ClinicDto clinicDto) {
+    public Clinic toEntity(ClinicDto clinicDto) {
+        if (clinicDto == null) {
+            return null;
+        }
+
         return new Clinic(
                 clinicDto.getClinicId(),
                 clinicDto.getName(),
