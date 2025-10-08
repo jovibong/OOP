@@ -1,13 +1,12 @@
 package Singheatlh.springboot_backend.service.impl;
 
-import Singheatlh.springboot_backend.dto.PatientDTO;
+import Singheatlh.springboot_backend.dto.PatientDto;
 import Singheatlh.springboot_backend.entity.Patient;
 import Singheatlh.springboot_backend.exception.ResourceNotFoundExecption;
 import Singheatlh.springboot_backend.mapper.PatientMapper;
 import Singheatlh.springboot_backend.repository.PatientRepository;
 import Singheatlh.springboot_backend.service.PatientService;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.ResourceAccessException;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -15,47 +14,59 @@ import java.util.stream.Collectors;
 @Service
 public class PatientServiceImpl implements PatientService {
 
-    private PatientRepository patientRepository;
+    private final PatientRepository patientRepository;
+    private final PatientMapper patientMapper;
+
+    // ✅ Constructor injection (preferred by Spring)
+    public PatientServiceImpl(PatientRepository patientRepository, PatientMapper patientMapper) {
+        this.patientRepository = patientRepository;
+        this.patientMapper = patientMapper;
+    }
 
     @Override
-    public PatientDTO getById(Long id) {
+    public PatientDto getById(Long id) {
         Patient patient = patientRepository.findById(id).orElseThrow(
-                ()->new ResourceNotFoundExecption("Patient does not exist with the given id " + id)
+                () -> new ResourceNotFoundExecption("Patient does not exist with the given id " + id)
         );
-        return PatientMapper.mapToPatientDTO(patient);
+        return patientMapper.toDto(patient);
     }
 
     @Override
-    public PatientDTO createPatient(PatientDTO patientDTO) {
-        Patient patient = PatientMapper.mapToPatient(patientDTO);
+    public PatientDto createPatient(PatientDto patientDto) {
+        Patient patient = patientMapper.toEntity(patientDto);
         Patient savedPatient = patientRepository.save(patient);
-        return PatientMapper.mapToPatientDTO(savedPatient);
+        return patientMapper.toDto(savedPatient);
     }
 
     @Override
-    public List<PatientDTO> getAllPatients() {
+    public List<PatientDto> getAllPatients() {
         List<Patient> patients = patientRepository.findAll();
-        return patients.stream().map(PatientMapper::mapToPatientDTO).collect(Collectors.toList());
+        return patients.stream()
+                .map(patientMapper::toDto)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public PatientDTO updatePatient(PatientDTO patientDTO) {
-        Patient patient = patientRepository.findById(patientDTO.getId()).orElseThrow(
-                ()->new ResourceNotFoundExecption("Patient does not exist with the given id " + patientDTO)
+    public PatientDto updatePatient(PatientDto patientDto) {
+        Patient patient = patientRepository.findById(patientDto.getId()).orElseThrow(
+                () -> new ResourceNotFoundExecption("Patient does not exist with the given id " + patientDto.getId())
         );
-        patient.setName(patientDTO.getName());
-        patient.setEmail(patientDTO.getEmail());
-        Patient savedPatient = patientRepository.save(patient);
-        return PatientMapper.mapToPatientDTO(savedPatient);
 
+        // ✅ Update fields
+        patient.setName(patientDto.getName());
+        patient.setEmail(patientDto.getEmail());
+        patient.setUsername(patientDto.getUsername());
+        patient.setRole(patientDto.getRole());
+
+        Patient savedPatient = patientRepository.save(patient);
+        return patientMapper.toDto(savedPatient);
     }
 
     @Override
     public void deletePatient(Long id) {
         Patient patient = patientRepository.findById(id).orElseThrow(
-                ()->new ResourceNotFoundExecption("Patient does not exist with the given id " + id)
+                () -> new ResourceNotFoundExecption("Patient does not exist with the given id " + id)
         );
-        patientRepository.deleteById(id);
-
+        patientRepository.delete(patient);
     }
 }
