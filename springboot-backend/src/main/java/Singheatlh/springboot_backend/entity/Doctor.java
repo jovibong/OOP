@@ -6,8 +6,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.List;
-
 @Entity
 @Table(name = "doctor")
 @Getter
@@ -27,20 +25,6 @@ public class Doctor {
     @Column(nullable = false)
     private String schedule;
 
-    @Column(name = "clinic_id", nullable = false)
+    @Column(name = "clinic_id")
     private Integer clinicId;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "clinic_id", insertable = false, updatable = false)
-    private Clinic clinic;
-
-    @OneToMany(mappedBy = "doctorId", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Appointment> appointments;
-
-    public Doctor(Long doctorId, String name, String schedule, Integer clinicId) {
-        this.doctorId = doctorId;
-        this.name = name;
-        this.schedule = schedule;
-        this.clinicId = clinicId;
-    }
 }
