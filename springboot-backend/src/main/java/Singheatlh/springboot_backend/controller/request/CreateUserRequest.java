@@ -1,16 +1,18 @@
-package Singheatlh.springboot_backend.dto;
+package Singheatlh.springboot_backend.controller.request;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+@Setter
+@Getter
 @AllArgsConstructor
 @NoArgsConstructor
-@Getter
-@Setter
-public class PatientDTO {
-    private Long id;
+public class CreateUserRequest {
+    private String username;
     private String name;
     private String email;
+    private String hashedPassword;
+
 }

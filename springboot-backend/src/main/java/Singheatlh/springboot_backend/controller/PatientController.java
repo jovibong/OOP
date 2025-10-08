@@ -1,7 +1,7 @@
 package Singheatlh.springboot_backend.controller;
 
-import Singheatlh.springboot_backend.dto.PatientDTO;
-import Singheatlh.springboot_backend.entity.Patient;
+import Singheatlh.springboot_backend.controller.request.CreateUserRequest;
+import Singheatlh.springboot_backend.dto.PatientDto;
 import Singheatlh.springboot_backend.service.PatientService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -18,26 +18,33 @@ public class PatientController {
     private PatientService patientService;
 
     @GetMapping("{id}")
-    public ResponseEntity<PatientDTO> getPatientById(@PathVariable("id") long patientId) {
-        PatientDTO patientDTO = patientService.getById(patientId);
+    public ResponseEntity<PatientDto> getPatientById(@PathVariable("id") long patientId) {
+        PatientDto patientDTO = patientService.getById(patientId);
         return ResponseEntity.ok(patientDTO);
     }
 
     @GetMapping
-    public ResponseEntity<List<PatientDTO>> getAllPatients() {
-        List<PatientDTO> patients =  patientService.getAllPatients();
+    public ResponseEntity<List<PatientDto>> getAllPatients() {
+        List<PatientDto> patients =  patientService.getAllPatients();
         return ResponseEntity.ok(patients);
     }
 
     @PostMapping
-    public ResponseEntity<PatientDTO> createPatient(@RequestBody PatientDTO patientDTO) {
-        PatientDTO newPatient = patientService.createPatient(patientDTO);
+    public ResponseEntity<PatientDto> createPatient(@RequestBody CreateUserRequest createPatientRequest) {
+        PatientDto patientDto = PatientDto.builder()
+                .username(createPatientRequest.getUsername())
+                .name(createPatientRequest.getName())
+                .email(createPatientRequest.getEmail())
+                .appointments(null)
+                .build();
+
+        PatientDto newPatient = patientService.createPatient(patientDto, createPatientRequest.getHashedPassword());
         return new ResponseEntity<>(newPatient,HttpStatus.CREATED);
     }
 
     @PutMapping
-    public ResponseEntity<PatientDTO> updatePatient(@RequestBody PatientDTO patientDTO) {
-        PatientDTO newPatient = patientService.updatePatient(patientDTO);
+    public ResponseEntity<PatientDto> updatePatient(@RequestBody PatientDto patientDTO) {
+        PatientDto newPatient = patientService.updatePatient(patientDTO);
         return ResponseEntity.ok(newPatient);
     }
 

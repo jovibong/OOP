@@ -1,13 +1,14 @@
 package Singheatlh.springboot_backend.service;
 
-import Singheatlh.springboot_backend.dto.PatientDTO;
+import Singheatlh.springboot_backend.dto.PatientDto;
+import Singheatlh.springboot_backend.dto.PatientDto;
 
 import java.util.List;
 
 public interface PatientService {
-    PatientDTO getById(Long id);
-    PatientDTO createPatient(PatientDTO patientDTO);
-    List<PatientDTO> getAllPatients();
-    PatientDTO updatePatient(PatientDTO patientDTO);
+    PatientDto getById(Long id);
+    PatientDto createPatient(PatientDto patientDto, String password);
+    List<PatientDto> getAllPatients();
+    PatientDto updatePatient(PatientDto patientDto);
     void deletePatient(Long id);
 }

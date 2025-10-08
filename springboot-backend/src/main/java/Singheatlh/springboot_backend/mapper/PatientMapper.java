@@ -1,22 +1,52 @@
 package Singheatlh.springboot_backend.mapper;
 
-import Singheatlh.springboot_backend.dto.PatientDTO;
+import org.springframework.stereotype.Component;
+import Singheatlh.springboot_backend.dto.AppointmentDto;
+import Singheatlh.springboot_backend.dto.PatientDto;
 import Singheatlh.springboot_backend.entity.Patient;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Component
 public class PatientMapper {
-    public static PatientDTO mapToPatientDTO(Patient patient) {
-        return new PatientDTO(
-                patient.getId(),
-                patient.getName(),
-                patient.getEmail()
-        );
+
+    private final AppointmentMapper appointmentMapper;
+
+    public PatientMapper(AppointmentMapper appointmentMapper) {
+        this.appointmentMapper = appointmentMapper;
     }
 
-    public static Patient mapToPatient(PatientDTO patientDTO) {
-        return new Patient(
-                patientDTO.getId(),
-                patientDTO.getName(),
-                patientDTO.getEmail()
-        );
+    public PatientDto toDto(Patient patient) {
+        if (patient == null) return null;
+
+        PatientDto dto = new PatientDto();
+        dto.setId(patient.getId());
+        dto.setUsername(patient.getUsername());
+        dto.setName(patient.getName());
+        dto.setEmail(patient.getEmail());
+        dto.setRole(patient.getRole());
+
+        if (patient.getAppointments() != null) {
+            List<AppointmentDto> appointmentDtos = patient.getAppointments().stream()
+                    .map(appointmentMapper::toDto)
+                    .collect(Collectors.toList());
+            dto.setAppointments(appointmentDtos);
+        }
+
+        return dto;
+    }
+
+    public Patient toEntity(PatientDto dto) {
+        if (dto == null) return null;
+
+        Patient patient = new Patient();
+        patient.setId(dto.getId());
+        patient.setUsername(dto.getUsername());
+        patient.setName(dto.getName());
+        patient.setEmail(dto.getEmail());
+        patient.setRole(dto.getRole());
+        // appointments handled by AppointmentService or separate mapper logic
+        return patient;
     }
 }
