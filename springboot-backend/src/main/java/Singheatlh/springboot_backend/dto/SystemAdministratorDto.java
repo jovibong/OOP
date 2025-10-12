@@ -1,6 +1,9 @@
 package Singheatlh.springboot_backend.dto;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 import java.util.List;
@@ -10,6 +13,6 @@ import java.util.List;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @SuperBuilder
-public class PatientDto extends UserDto {
-    private List<Long> appointmentIds;
+public class SystemAdministratorDto extends UserDto {
+
 }
