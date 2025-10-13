@@ -9,6 +9,8 @@ import java.util.Optional;
 
 public interface ClinicStaffRepository extends JpaRepository<ClinicStaff, String> {
     List<ClinicStaff> findByNameContainingIgnoreCase(String name);
-    List<ClinicStaff> findByClinicId(Integer clinicId);
+
+    List<ClinicStaff> findByClinicClinicId(Integer clinicId);
+
     Optional<ClinicStaff> findByEmail(String email);
 }
