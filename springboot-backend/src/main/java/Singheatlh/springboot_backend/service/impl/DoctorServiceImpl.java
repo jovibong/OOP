@@ -10,6 +10,7 @@ import Singheatlh.springboot_backend.repository.DoctorRepository;
 import Singheatlh.springboot_backend.service.DoctorService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -31,6 +32,7 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
+    @Transactional
     public DoctorDto createDoctor(DoctorDto doctorDto) {
         Doctor doctor = doctorMapper.toEntity(doctorDto);
 
@@ -62,6 +64,7 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
+    @Transactional
     public DoctorDto updateDoctor(DoctorDto doctorDto) {
         Doctor doctor = doctorRepository.findById(doctorDto.getDoctorId()).orElseThrow(
                 () -> new ResourceNotFoundExecption("Doctor does not exist with the given id " + doctorDto.getDoctorId())
@@ -84,6 +87,7 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
+    @Transactional
     public void deleteDoctor(Long id) {
         doctorRepository.findById(id).orElseThrow(
                 () -> new ResourceNotFoundExecption("Doctor does not exist with the given id " + id)

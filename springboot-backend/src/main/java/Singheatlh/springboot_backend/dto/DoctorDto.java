@@ -1,5 +1,6 @@
 package Singheatlh.springboot_backend.dto;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -11,7 +12,12 @@ import lombok.Setter;
 @Setter
 public class DoctorDto {
     private Long doctorId;
+
+    @NotBlank(message = "Doctor name is required")
     private String name;
+
+    @NotBlank(message = "Doctor schedule is required")
     private String schedule;
+
     private Integer clinicId;
 }
