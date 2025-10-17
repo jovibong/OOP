@@ -25,237 +25,258 @@ Refer to [development.md](./development.md) for API endpoints and database migra
 
 ### Prerequisites
 
-- **Frontend**: Node.js (v18+) and npm installed → [Download Node.js](https://nodejs.org/)
-- **Backend**: JDK 17+ installed  
-  (Maven **not required**, the project uses Maven Wrapper: `mvnw` / `mvnw.cmd`)
-- **Database**: Docker and Docker Compose → [Download Docker](https://www.docker.com/products/docker-desktop/)
+- **Node.js** (v18+) and npm → [Download Node.js](https://nodejs.org/)
+- **JDK 21+** → Installed automatically by Maven Wrapper, or [Download Java](https://adoptium.net/)
+- **Docker Desktop** → [Download Docker](https://www.docker.com/products/docker-desktop/)
+
+### One-Time Setup
+
+Before running the app for the first time, copy the configuration files:
+
+**Windows (PowerShell):**
+```powershell
+Copy-Item db\.env.example db\.env ; Copy-Item springboot-backend\src\main\resources\application.properties.example springboot-backend\src\main\resources\application.properties
+```
+
+**macOS/Linux:**
+```bash
+cp db/.env.example db/.env && cp springboot-backend/src/main/resources/application.properties.example springboot-backend/src/main/resources/application.properties
+```
+
+> **Note**: Default values work for local development. Update passwords before production!
+
+### Quick Start (Automated)
+
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Start everything (database + backend + frontend)
+npm run dev:setup
+```
+
+**That's it!** Your app will be running at:
+- **Frontend**: <http://localhost:5173>
+- **Backend**: <http://localhost:8080>
+- **Database Studio**: <http://localhost:8000> (login: `supabase` / `postgres`)
 
 ---
 
-## 🐳 Database Setup with Docker (Supabase)
+## 📋 Available Commands
 
-This project uses a local Supabase instance running in Docker containers for development.
+| Command | Description |
+|---------|-------------|
+| `npm run dev:setup` | **First-time setup**: Start database, build backend, run everything |
+| `npm run dev` | **Daily use**: Start backend + frontend (assumes DB is running) |
+| `npm run db:up` | Start database containers |
+| `npm run db:down` | Stop database and remove all data |
+| `npm run db:restart` | Restart database (useful for resets) |
+| `npm run backend` | Start Spring Boot backend only |
+| `npm run frontend` | Start React frontend only |
 
-### 1. Setup Environment Variables
+### Common Workflows
 
-First, copy the environment example file and configure it:
-
+**Starting Fresh (First Time):**
 ```bash
-# Navigate to the database directory
-cd db
-
-# Copy the environment example file (Windows PowerShell)
-Copy-Item .env.example .env
-
-# Or on macOS/Linux
-cp .env.example .env
+npm install
+npm run dev:setup
 ```
 
-**Important**: The `.env.example` file contains default values that work for local development. You can use these values as-is for development, but make sure to change them before going to production.
+**Daily Development:**
+```bash
+npm run db:up        # Start database
+npm run dev          # Start backend + frontend
+```
 
-### 2. Start the Database Services
+**Reset Everything:**
+```bash
+npm run db:down      # Stop and clear database
+npm run dev:setup    # Restart from scratch
+```
+
+---
+
+## 🔧 Manual Setup (Alternative)
+
+If you prefer to run components individually:
+
+### 1. Database Setup
 
 ```bash
-# Navigate to the database directory (if not already there)
 cd db
 
-# Start all Supabase services
-docker compose up
+# Copy environment file (one-time)
+Copy-Item .env.example .env    # Windows PowerShell
+# or: cp .env.example .env     # macOS/Linux
 
-# Or run in detached mode (background)
+# Start database
 docker compose up -d
+
+# Access Studio at http://localhost:8000
+# Login: supabase / postgres
 ```
 
-This will start **6 services**:
-- **PostgreSQL** - Database server
-- **Kong** - API Gateway
-- **GoTrue** - Authentication service
-- **PostgREST** - REST API for database
-- **pg-meta** - Database metadata service
-- **Studio** - Web-based database GUI
-
-### 3. Access Supabase Studio
-
-Once the containers are running, you can access:
-
-- **Supabase Studio Dashboard**: <http://localhost:8000> (login required)
-- **Database Direct Connection**: `localhost:5434`
-- **Auth API**: <http://localhost:8000/auth/v1>
-- **REST API**: <http://localhost:8000/rest/v1>
-
-**Studio Login Credentials:**
-- **Username**: `supabase`
-- **Password**: `postgres`
-
-### 4. Spring Boot Database Configuration
-
-Before running the Spring Boot backend, set up your database connection:
-
-```bash
-# Navigate to the backend resources directory
-cd springboot-backend/src/main/resources
-
-# Copy the application.properties file
-cp application.properties.example application.properties
-```
-
-**Important**: Open `application.properties` and update the database password to match your `.env` file in the `db` folder (default: `your-super-secret-and-long-postgres-password`).
-
-### 5. Stop the Database Services
-
-```bash
-# Stop services (preserves data)
-docker compose down
-
-# Stop and remove all data (complete reset)
-docker compose down -v
-```
-
-**Note**: Data is **not persistent** by default. Running `docker compose down -v` will reset the database to its initial state.
-
-### 6. Preventing Auto-Start on Reboot
-
-The containers are configured with `restart: no`, which means they won't automatically start when you restart your computer or Docker Desktop. You'll need to manually run `docker compose up -d` each time you want to start the database.
-
-If you want containers to auto-start after reboot, change `restart: no` to `restart: unless-stopped` in `docker-compose.yml`.
-
----
-
-## 🗄️ Database Migrations
-
-The Spring Boot backend uses **Flyway** for automatic database migrations. When you start the backend for the first time, it will:
-
-1. ✅ Automatically create all database tables (Clinic, User_Profile, Doctor, Schedule, Appointment, etc.)
-2. ✅ Set up Supabase authentication integration (auto-create user profiles on signup)
-3. ✅ Apply all schema changes in version order
-
-**No manual database setup required!** Just start the backend and Flyway handles the rest.
-
-📖 **To make database changes**, see the "Database Migrations" section in [development.md](./development.md)
-
----
-
-## ▶️ Running the Application
-
-### Step 1: Start the Database
-
-```bash
-cd db
-docker compose up -d
-```
-
-### Step 2: Start the Backend
+### 2. Backend Setup
 
 ```bash
 cd springboot-backend
 
-# macOS/Linux
-./mvnw spring-boot:run
+# Copy config file (one-time)
+Copy-Item src/main/resources/application.properties.example src/main/resources/application.properties
 
-# Windows PowerShell
-.\mvnw.cmd spring-boot:run
+# Start backend
+.\mvnw.cmd spring-boot:run     # Windows
+# or: ./mvnw spring-boot:run   # macOS/Linux
 ```
 
-**First-time setup**: On the first run, the backend will automatically:
-- Download dependencies (including Flyway)
-- Connect to the database
-- Run all migration scripts
-- Create all tables and triggers
+**First run**: Flyway automatically creates all database tables.
 
-### Step 3: Start the Frontend
+### 3. Frontend Setup
 
 ```bash
 cd vite-react-frontend
+
+# Install and start
 npm install
 npm run dev
 ```
 
-### Step 4: Access the Application
+## � Documentation
 
-- **Frontend**: <http://localhost:5173>
-- **Backend API**: <http://localhost:8080>
-- **Supabase Studio**: <http://localhost:8000> (login: supabase/postgres)
-- **Database Direct**: `localhost:5434` (user: postgres)
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)**: Layered architecture pattern and project structure
+- **[development.md](./development.md)**: API endpoints reference, database migrations guide, CORS configuration
 
 ---
 
-## 🔧 Development Workflow
+## 🗄️ Database Info
 
-**Recommended startup sequence:**
+- **PostgreSQL** on port **5434** (not default 5432 to avoid conflicts)
+- **Supabase Studio** at <http://localhost:8000> (login: `supabase` / `postgres`)
+- **Flyway migrations** run automatically on backend startup
+- **Data is not persistent** - stopping containers resets the database
 
-1. **Start the database**: `cd db && docker compose up -d`
-2. **Start the backend**: `cd springboot-backend && .\mvnw.cmd spring-boot:run` (Windows) or `./mvnw spring-boot:run` (Mac/Linux)
-3. **Start the frontend**: `cd vite-react-frontend && npm run dev`
-4. **Access the application**: Open <http://localhost:5173> in your browser
+---
 
-**When you're done developing:**
+## 🔍 What Happens on First Run
 
-```bash
-# Stop frontend: Press Ctrl+C in the terminal
-# Stop backend: Press Ctrl+C in the terminal
-# Stop database: cd db && docker compose down
-```
+When you run `npm run dev:setup`, here's what happens automatically:
+
+1. ✅ **Database**: Docker starts 6 containers (PostgreSQL, Kong, GoTrue, PostgREST, pg-meta, Studio)
+2. ✅ **Backend**: Maven downloads dependencies, Flyway creates all tables/triggers
+3. ✅ **Frontend**: npm installs React, Vite, and dependencies
+4. ✅ **Ready**: All services running and connected
+
+**Database tables created by Flyway:**
+- `Clinic`, `User_Profile`, `Doctor`, `Schedule`, `Appointment`, `Queue_Ticket`, `Medical_Summary`
+- Authentication trigger for auto-creating user profiles on Supabase signup
 
 ---
 
 ## 🐛 Troubleshooting
 
-### "JAVA_HOME environment variable is not defined correctly"
+### Database Not Starting
 
-If you get this error when running `.\mvnw.cmd spring-boot:run`, you need to set the JAVA_HOME environment variable.
+```bash
+# Check if containers are running
+docker ps
 
-**Quick Fix (Windows PowerShell - Temporary):**
+# View logs
+docker compose logs
+
+# Restart everything
+npm run db:restart
+```
+
+### Port Conflicts
+
+| Port | Service | Solution |
+|------|---------|----------|
+| 5434 | PostgreSQL | Change `POSTGRES_EXTERNAL_PORT` in `db/.env` |
+| 8080 | Spring Boot | Change `server.port` in `application.properties` |
+| 8000 | Supabase Kong | Change port mapping in `docker-compose.yml` |
+| 5173 | Vite | Change port in `vite.config.js` |
+
+### Backend Won't Start
+
+**Error: "Connection refused to database"**
+```bash
+npm run db:up  # Make sure database is running
+```
+
+**Error: "Flyway migration failed"**
+```bash
+npm run db:restart  # Reset database and migrations
+```
+
+### JAVA_HOME Not Set (Windows)
+
+If Maven can't find Java:
 
 ```powershell
-# Set JAVA_HOME for current session only
+# Temporary fix (current session only)
 $env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-21.0.8.9-hotspot"
+npm run backend
 
-# Now run Maven
-.\mvnw.cmd spring-boot:run
+# Permanent fix: Set as Windows environment variable
+# Settings → System → Advanced → Environment Variables → New
+# Variable: JAVA_HOME
+# Value: C:\Program Files\Eclipse Adoptium\jdk-21.0.8.9-hotspot
 ```
 
-**Permanent Fix (Windows):**
+### Frontend Issues
 
-1. Find your Java installation path:
-   ```powershell
-   (Get-Command java).Source
-   # Example output: C:\Program Files\Eclipse Adoptium\jdk-21.0.8.9-hotspot\bin\java.exe
-   ```
-2. Copy the path WITHOUT `\bin\java.exe` (e.g., `C:\Program Files\Eclipse Adoptium\jdk-21.0.8.9-hotspot`)
-
-3. Set JAVA_HOME permanently:
-   - Press `Win + X` and select "System"
-   - Click "Advanced system settings"
-   - Click "Environment Variables"
-   - Under "System variables", click "New"
-   - Variable name: `JAVA_HOME`
-   - Variable value: `C:\Program Files\Eclipse Adoptium\jdk-21.0.8.9-hotspot` (your path)
-   - Click OK on all dialogs
-   - **Restart your terminal** (or restart VS Code)
-
-4. Verify it works:
-   ```powershell
-   echo $env:JAVA_HOME
-   # Should show: C:\Program Files\Eclipse Adoptium\jdk-21.0.8.9-hotspot
-   ```
-
-**Alternative: Run with Java directly (bypass Maven Wrapper)**
-
-If you don't want to set JAVA_HOME, you can use Maven directly:
-
-```powershell
-# Navigate to backend
-cd springboot-backend
-
-# Run with Maven (if installed)
-mvn spring-boot:run
+```bash
+# Clear node_modules and reinstall
+cd vite-react-frontend
+Remove-Item -Recurse -Force node_modules
+npm install
+npm run dev
 ```
 
-### Other Common Issues
+### CORS Errors
 
-| Problem | Solution |
-|---------|----------|
-| Port 8080 already in use | Another app is using port 8080. Stop it or change Spring Boot port in `application.properties`: `server.port=8081` |
-| Database connection refused | Make sure Docker containers are running: `cd db && docker compose up -d` |
-| Cannot access Studio at localhost:8000 | Check containers are healthy: `docker ps`. Restart if needed: `cd db && docker compose restart` |
-| Flyway migration failed | Reset database: `cd db && docker compose down -v && docker compose up -d` |
+CORS is configured for `http://localhost:5173` only. If you change the frontend port, update:
+- `springboot-backend/src/main/java/Singheatlh/springboot_backend/config/SecurityConfig.java`
+- Change `allowedOrigins` to match your new port
+
+---
+
+## 📖 Additional Resources
+
+- **API Documentation**: See [development.md](./development.md) for all 74 available endpoints
+- **Database Migrations**: Add new tables/columns using Flyway - guide in [development.md](./development.md)
+- **Architecture**: Understand the layered pattern in [ARCHITECTURE.md](./ARCHITECTURE.md)
+
+---
+
+## 🛠️ Tech Stack
+
+**Frontend:**
+- React 19 + Vite
+- React Router v6
+- Bootstrap 5
+- Axios
+- Supabase JS Client
+
+**Backend:**
+- Spring Boot 4.0.0-M3
+- Hibernate 7.1.1
+- Flyway 11.13.1
+- PostgreSQL 15
+
+**Infrastructure:**
+- Docker + Docker Compose
+- Supabase (local)
+- Maven Wrapper
+
+---
+
+## 👥 Contributors
+
+See the [GitHub contributors page](https://github.com/jovibong/OOP/graphs/contributors) for the full list.
+
+---
+
+## 📝 License
+
+This project is licensed under the ISC License.
