@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "SingHealth Clinic Management System",
   "scripts": {
-    "dev:setup": "npm run db:up && npm run backend:build && concurrently \"npm run backend\" \"npm run frontend\"",
+    "dev:setup": "npm install && npm run db:up && npm run backend:build && concurrently \"npm run backend\" \"npm run frontend\"",
     "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
     "db:down": "cd db && docker compose down -v && cd ..",
     "db:up": "cd db && docker compose up -d && cd ..",
