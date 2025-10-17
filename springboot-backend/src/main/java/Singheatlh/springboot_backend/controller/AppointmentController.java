@@ -2,6 +2,7 @@ package Singheatlh.springboot_backend.controller;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -121,7 +122,7 @@ public class AppointmentController {
     
     // Get appointments by patient ID
     @GetMapping("/patient/{patientId}")
-    public ResponseEntity<List<AppointmentDto>> getAppointmentsByPatientId(@PathVariable Long patientId) {
+    public ResponseEntity<List<AppointmentDto>> getAppointmentsByPatientId(@PathVariable UUID patientId) {
         try {
             List<AppointmentDto> appointments = appointmentService.getAppointmentsByPatientId(patientId);
             return ResponseEntity.ok(appointments);
@@ -132,7 +133,7 @@ public class AppointmentController {
     
     // Get upcoming appointments by patient ID
     @GetMapping("/patient/{patientId}/upcoming")
-    public ResponseEntity<List<AppointmentDto>> getUpcomingAppointmentsByPatientId(@PathVariable Long patientId) {
+    public ResponseEntity<List<AppointmentDto>> getUpcomingAppointmentsByPatientId(@PathVariable UUID patientId) {
         try {
             List<AppointmentDto> appointments = appointmentService.getUpcomingAppointmentsByPatientId(patientId);
             return ResponseEntity.ok(appointments);
@@ -143,7 +144,7 @@ public class AppointmentController {
     
     // Get appointments by doctor ID
     @GetMapping("/doctor/{doctorId}")
-    public ResponseEntity<List<AppointmentDto>> getAppointmentsByDoctorId(@PathVariable Long doctorId) {
+    public ResponseEntity<List<AppointmentDto>> getAppointmentsByDoctorId(@PathVariable String doctorId) {
         try {
             List<AppointmentDto> appointments = appointmentService.getAppointmentsByDoctorId(doctorId);
             return ResponseEntity.ok(appointments);
@@ -154,7 +155,7 @@ public class AppointmentController {
     
     // Get upcoming appointments by doctor ID
     @GetMapping("/doctor/{doctorId}/upcoming")
-    public ResponseEntity<List<AppointmentDto>> getUpcomingAppointmentsByDoctorId(@PathVariable Long doctorId) {
+    public ResponseEntity<List<AppointmentDto>> getUpcomingAppointmentsByDoctorId(@PathVariable String doctorId) {
         try {
             List<AppointmentDto> appointments = appointmentService.getUpcomingAppointmentsByDoctorId(doctorId);
             return ResponseEntity.ok(appointments);
@@ -163,20 +164,9 @@ public class AppointmentController {
         }
     }
     
-    // Get appointments by clinic ID
-    @GetMapping("/clinic/{clinicId}")
-    public ResponseEntity<List<AppointmentDto>> getAppointmentsByClinicId(@PathVariable Long clinicId) {
-        try {
-            List<AppointmentDto> appointments = appointmentService.getAppointmentsByClinicId(clinicId);
-            return ResponseEntity.ok(appointments);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-    
     // Get appointment by ID - MUST be last among GET mappings to avoid path conflicts
     @GetMapping("/{id}")
-    public ResponseEntity<AppointmentDto> getAppointmentById(@PathVariable Long id) {
+    public ResponseEntity<AppointmentDto> getAppointmentById(@PathVariable String id) {
         try {
             AppointmentDto appointment = appointmentService.getAppointmentById(id);
             return ResponseEntity.ok(appointment);
@@ -190,7 +180,7 @@ public class AppointmentController {
     
     @PutMapping("/{id}/status")
     public ResponseEntity<AppointmentDto> updateAppointmentStatus(
-            @PathVariable Long id, 
+            @PathVariable String id, 
             @RequestParam AppointmentStatus status) {
         try {
             if (status == null) {
@@ -207,7 +197,7 @@ public class AppointmentController {
     
     
     @PutMapping("/{id}/cancel")
-    public ResponseEntity<Void> cancelAppointment(@PathVariable Long id) {
+    public ResponseEntity<Void> cancelAppointment(@PathVariable String id) {
         try {
             appointmentService.cancelAppointment(id);
             return ResponseEntity.ok().build();
@@ -220,7 +210,7 @@ public class AppointmentController {
     
     // Convenient status update endpoints
     @PutMapping("/{id}/complete")
-    public ResponseEntity<AppointmentDto> completeAppointment(@PathVariable Long id) {
+    public ResponseEntity<AppointmentDto> completeAppointment(@PathVariable String id) {
         try {
             AppointmentDto updatedAppointment = appointmentService.updateAppointmentStatus(id, AppointmentStatus.Completed);
             return ResponseEntity.ok(updatedAppointment);
@@ -232,7 +222,7 @@ public class AppointmentController {
     }
     
     @PutMapping("/{id}/mark-missed")
-    public ResponseEntity<AppointmentDto> markAppointmentAsMissed(@PathVariable Long id) {
+    public ResponseEntity<AppointmentDto> markAppointmentAsMissed(@PathVariable String id) {
         try {
             AppointmentDto updatedAppointment = appointmentService.updateAppointmentStatus(id, AppointmentStatus.Missed);
             return ResponseEntity.ok(updatedAppointment);
@@ -244,7 +234,7 @@ public class AppointmentController {
     }
     
     @PutMapping("/{id}/start")
-    public ResponseEntity<AppointmentDto> startAppointment(@PathVariable Long id) {
+    public ResponseEntity<AppointmentDto> startAppointment(@PathVariable String id) {
         try {
             AppointmentDto updatedAppointment = appointmentService.updateAppointmentStatus(id, AppointmentStatus.Ongoing);
             return ResponseEntity.ok(updatedAppointment);
@@ -257,7 +247,7 @@ public class AppointmentController {
     
     @PutMapping("/{id}/reschedule")
     public ResponseEntity<AppointmentDto> rescheduleAppointment(
-            @PathVariable Long id, 
+            @PathVariable String id, 
             @RequestParam LocalDateTime newDateTime) {
         try {
             if (newDateTime == null) {

@@ -13,7 +13,7 @@ CREATE TABLE Clinic (
     type VARCHAR(1) NOT NULL CHECK (type IN ('G', 'S')),
     name VARCHAR(255) NOT NULL,
     address VARCHAR(255),
-    telephone_number VARCHAR(20),
+    telephone_number VARCHAR(20),  -- Made nullable
     opening_hours TIME,
     closing_hours TIME
 );
@@ -29,7 +29,7 @@ CREATE TABLE User_Profile (
     role VARCHAR(1) NOT NULL CHECK (role IN ('P', 'C', 'S')),
     email VARCHAR(255) UNIQUE NOT NULL,
     telephone_number VARCHAR(20),
-    clinic_id INT,
+    clinic_id INT,  -- Made nullable (only Clinic Staff use this)
     CONSTRAINT fk_user_clinic FOREIGN KEY (clinic_id) 
         REFERENCES Clinic(clinic_id) 
         ON DELETE SET NULL
