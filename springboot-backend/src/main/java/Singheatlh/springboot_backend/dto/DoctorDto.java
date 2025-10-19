@@ -10,8 +10,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class DoctorDto {
-    private Long doctorId;
+    private String doctorId;  // CHAR(10)
     private String name;
-    private String schedule;
     private Integer clinicId;
 }
