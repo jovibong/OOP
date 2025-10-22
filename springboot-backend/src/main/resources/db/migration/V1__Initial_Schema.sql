@@ -88,10 +88,13 @@ CREATE TABLE Appointment (
 -- Description: Manages queue tickets for checked-in appointments
 -- =====================================================
 CREATE TABLE Queue_Ticket (
-    ticket_id CHAR(10) PRIMARY KEY,
+    ticket_id SERIAL PRIMARY KEY,
     appointment_id CHAR(10) NOT NULL UNIQUE,
     status VARCHAR(20),
     check_in_time TIMESTAMP,
+    queue_number INTEGER NOT NULL,
+    is_fast_tracked BOOLEAN DEFAULT FALSE,
+    fast_track_reason VARCHAR(255),
     CONSTRAINT fk_queue_appointment FOREIGN KEY (appointment_id) 
         REFERENCES Appointment(appointment_id) 
         ON DELETE CASCADE
@@ -149,6 +152,12 @@ CREATE INDEX idx_queue_status ON Queue_Ticket(status);
 
 -- Index on Queue_Ticket check_in_time for FIFO ordering
 CREATE INDEX idx_queue_checkin_time ON Queue_Ticket(check_in_time);
+
+-- Index on Queue_Ticket queue_number for queue ordering
+CREATE INDEX idx_queue_number ON Queue_Ticket(queue_number);
+
+-- Index on Queue_Ticket appointment_id for joins
+CREATE INDEX idx_queue_appointment_id ON Queue_Ticket(appointment_id);
 
 -- =====================================================
 -- Comments for Documentation
