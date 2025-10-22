@@ -1,16 +1,15 @@
 package Singheatlh.springboot_backend.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
 
-@AllArgsConstructor
+import java.util.List;
+
+@Data
 @NoArgsConstructor
-@Getter
-@Setter
-public class PatientDTO {
-    private Long id;
-    private String name;
-    private String email;
+@AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
+@SuperBuilder
+public class PatientDto extends UserDto {
+    private List<String> appointmentIds;  // Changed from Long to String (CHAR(10))
 }

@@ -1,5 +1,13 @@
 package Singheatlh.springboot_backend.service.impl;
 
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import Singheatlh.springboot_backend.dto.ClinicDto;
 import Singheatlh.springboot_backend.entity.Clinic;
 import Singheatlh.springboot_backend.exception.ResourceNotFoundExecption;
@@ -7,26 +15,20 @@ import Singheatlh.springboot_backend.mapper.ClinicMapper;
 import Singheatlh.springboot_backend.repository.ClinicRepository;
 import Singheatlh.springboot_backend.service.ClinicManagementService;
 import lombok.AllArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
 public class ClinicManagementServiceImpl implements ClinicManagementService {
 
     private ClinicRepository clinicRepository;
+    private ClinicMapper clinicMapper;
 
     @Override
     @Transactional
     public ClinicDto createClinic(ClinicDto clinicDto) {
-        Clinic clinic = ClinicMapper.mapToClinic(clinicDto);
+        Clinic clinic = clinicMapper.toEntity(clinicDto);
         Clinic savedClinic = clinicRepository.save(clinic);
-        return ClinicMapper.mapToClinicDto(savedClinic);
+        return clinicMapper.toDto(savedClinic);
     }
 
     @Override
@@ -43,7 +45,7 @@ public class ClinicManagementServiceImpl implements ClinicManagementService {
         existingClinic.setClosingHours(clinicDto.getClosingHours());
 
         Clinic updatedClinic = clinicRepository.save(existingClinic);
-        return ClinicMapper.mapToClinicDto(updatedClinic);
+        return clinicMapper.toDto(updatedClinic);
     }
 
     @Override
@@ -58,32 +60,39 @@ public class ClinicManagementServiceImpl implements ClinicManagementService {
     public ClinicDto getClinicById(Integer clinicId) {
         Clinic clinic = clinicRepository.findById(clinicId)
                 .orElseThrow(() -> new ResourceNotFoundExecption("Clinic not found with id: " + clinicId));
-        return ClinicMapper.mapToClinicDto(clinic);
+        return clinicMapper.toDto(clinic);
     }
 
     @Override
     public List<ClinicDto> getAllClinics() {
         List<Clinic> clinics = clinicRepository.findAll();
-        return clinics.stream().map(ClinicMapper::mapToClinicDto).collect(Collectors.toList());
+        return clinics.stream().map(clinicMapper::toDto).collect(Collectors.toList());
     }
 
     @Override
     public List<ClinicDto> getClinicsByType(String type) {
         List<Clinic> clinics = clinicRepository.findByType(type);
-        return clinics.stream().map(ClinicMapper::mapToClinicDto).collect(Collectors.toList());
+        return clinics.stream().map(clinicMapper::toDto).collect(Collectors.toList());
+    }
+    
+    @Override
+    public ClinicDto getClinicByName(String name) {
+        Clinic clinic = clinicRepository.findByName(name)
+                .orElseThrow(() -> new ResourceNotFoundExecption("Clinic not found with name: " + name));
+        return clinicMapper.toDto(clinic);
     }
 
     @Override
     @Transactional
     public List<ClinicDto> importClinics(List<ClinicDto> clinics) {
         List<Clinic> clinicEntities = clinics.stream()
-                .map(ClinicMapper::mapToClinic)
+                .map(clinicMapper::toEntity)
                 .collect(Collectors.toList());
 
         List<Clinic> savedClinics = clinicRepository.saveAll(clinicEntities);
 
         return savedClinics.stream()
-                .map(ClinicMapper::mapToClinicDto)
+                .map(clinicMapper::toDto)
                 .collect(Collectors.toList());
     }
 
@@ -98,6 +107,6 @@ public class ClinicManagementServiceImpl implements ClinicManagementService {
         clinic.setClosingHours(LocalTime.parse(closingHours, formatter));
 
         Clinic updatedClinic = clinicRepository.save(clinic);
-        return ClinicMapper.mapToClinicDto(updatedClinic);
+        return clinicMapper.toDto(updatedClinic);
     }
 }
