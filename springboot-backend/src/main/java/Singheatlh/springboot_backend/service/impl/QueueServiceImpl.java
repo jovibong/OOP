@@ -90,7 +90,7 @@ public class QueueServiceImpl implements QueueService {
     }
 
     @Override
-    public QueueTicketDto getQueueTicketById(Long ticketId) {
+    public QueueTicketDto getQueueTicketById(Integer ticketId) {
         QueueTicket queueTicket = queueTicketRepository.findById(ticketId)
             .orElseThrow(() -> new ResourceNotFoundExecption("Queue ticket not found with id: " + ticketId));
         return queueTicketMapper.toDto(queueTicket);
@@ -104,7 +104,7 @@ public class QueueServiceImpl implements QueueService {
     }
 
     @Override
-    public QueueStatusDto getQueueStatus(Long ticketId) {
+    public QueueStatusDto getQueueStatus(Integer ticketId) {
         QueueTicket queueTicket = queueTicketRepository.findById(ticketId)
             .orElseThrow(() -> new ResourceNotFoundExecption("Queue ticket not found with id: " + ticketId));
         
@@ -183,6 +183,7 @@ public class QueueServiceImpl implements QueueService {
         for (QueueTicket serving : currentlyServing) {
             if (serving.getStatus() == QueueStatus.CALLED) {
                 serving.setStatus(QueueStatus.COMPLETED);
+                serving.setQueueNumber(0); // Set completed patient's queue number to 0
                 queueTicketRepository.save(serving);
                 
                 // Update appointment status
@@ -193,6 +194,20 @@ public class QueueServiceImpl implements QueueService {
                 }
             }
         }
+        
+        // Get all tickets for this doctor today to decrement queue numbers
+        List<QueueTicket> allTicketsToday = queueTicketRepository.findActiveQueueByDoctorIdAndDate(doctorId, today);
+        
+        // Decrement queue numbers for all active patients
+        for (QueueTicket ticket : allTicketsToday) {
+            if (ticket.getStatus() != QueueStatus.COMPLETED && ticket.getStatus() != QueueStatus.NO_SHOW) {
+                ticket.setQueueNumber(ticket.getQueueNumber() - 1);
+                queueTicketRepository.save(ticket);
+            }
+        }
+        
+        // Refresh the active queue list after updates
+        activeQueue = queueTicketRepository.findActiveQueueByDoctorIdAndDate(doctorId, today);
         
         // to prevent deadlock check if theres others in q if not return null
         Optional<QueueTicket> nextTicketOptional = activeQueue.stream()
@@ -214,7 +229,7 @@ public class QueueServiceImpl implements QueueService {
     }
 
     @Override
-    public QueueTicketDto updateQueueStatus(Long ticketId, QueueStatus status) {
+    public QueueTicketDto updateQueueStatus(Integer ticketId, QueueStatus status) {
         QueueTicket queueTicket = queueTicketRepository.findById(ticketId)
             .orElseThrow(() -> new ResourceNotFoundExecption("Queue ticket not found with id: " + ticketId));
         
@@ -241,22 +256,22 @@ public class QueueServiceImpl implements QueueService {
     }
 
     @Override
-    public QueueTicketDto markAsCheckedIn(Long ticketId) {
+    public QueueTicketDto markAsCheckedIn(Integer ticketId) {
         return updateQueueStatus(ticketId, QueueStatus.CHECKED_IN);
     }
 
     @Override
-    public QueueTicketDto markAsNoShow(Long ticketId) {
+    public QueueTicketDto markAsNoShow(Integer ticketId) {
         return updateQueueStatus(ticketId, QueueStatus.NO_SHOW);
     }
 
     @Override
-    public QueueTicketDto markAsCompleted(Long ticketId) {
+    public QueueTicketDto markAsCompleted(Integer ticketId) {
         return updateQueueStatus(ticketId, QueueStatus.COMPLETED);
     }
 
     @Override
-    public QueueTicketDto fastTrackPatient(Long ticketId, String reason) {
+    public QueueTicketDto fastTrackPatient(Integer ticketId, String reason) {
         QueueTicket queueTicket = queueTicketRepository.findById(ticketId)
             .orElseThrow(() -> new ResourceNotFoundExecption("Queue ticket not found with id: " + ticketId));
         
@@ -277,7 +292,7 @@ public class QueueServiceImpl implements QueueService {
     }
 
     @Override
-    public void cancelQueueTicket(Long ticketId) {
+    public void cancelQueueTicket(Integer ticketId) {
         QueueTicket queueTicket = queueTicketRepository.findById(ticketId)
             .orElseThrow(() -> new ResourceNotFoundExecption("Queue ticket not found with id: " + ticketId));
         
@@ -339,13 +354,12 @@ public class QueueServiceImpl implements QueueService {
     }
 
     @Override
-    public Integer getCurrentServingNumber(String doctorId) {
+    public Integer getCurrentServingTicketId(String doctorId) {
         LocalDateTime today = LocalDateTime.now();
         List<QueueTicket> currentlyServing = queueTicketRepository.findCurrentQueueNumberByDoctorIdAndDate(doctorId, today);
         
         if (!currentlyServing.isEmpty()) {
-
-            return currentlyServing.get(0).getQueueNumber();
+            return currentlyServing.get(0).getTicketId();
         }
         
         // If no one is currently being served, check if queue has started today
@@ -357,6 +371,19 @@ public class QueueServiceImpl implements QueueService {
         
         // Queue exists but no one is actively being served
         // Return 0 to indicate waiting for first patient to be called
+        return 0;
+    }
+    
+    // Private helper method to get current serving queue number (for internal use)
+    private Integer getCurrentServingNumber(String doctorId) {
+        LocalDateTime today = LocalDateTime.now();
+        List<QueueTicket> currentlyServing = queueTicketRepository.findCurrentQueueNumberByDoctorIdAndDate(doctorId, today);
+        
+        if (!currentlyServing.isEmpty()) {
+            return currentlyServing.get(0).getQueueNumber();
+        }
+        
+        // If no one is currently being served, return 0
         return 0;
     }
 

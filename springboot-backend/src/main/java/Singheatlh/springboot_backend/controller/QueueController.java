@@ -44,7 +44,7 @@ public class QueueController {
     
 
     @GetMapping("/ticket/{ticketId}")
-    public ResponseEntity<QueueTicketDto> getQueueTicketById(@PathVariable Long ticketId) {
+    public ResponseEntity<QueueTicketDto> getQueueTicketById(@PathVariable Integer ticketId) {
         try {
             QueueTicketDto queueTicket = queueService.getQueueTicketById(ticketId);
             return ResponseEntity.ok(queueTicket);
@@ -66,7 +66,7 @@ public class QueueController {
     
 
     @GetMapping("/status/{ticketId}")
-    public ResponseEntity<QueueStatusDto> getQueueStatus(@PathVariable Long ticketId) {
+    public ResponseEntity<QueueStatusDto> getQueueStatus(@PathVariable Integer ticketId) {
         try {
             QueueStatusDto status = queueService.getQueueStatus(ticketId);
             return ResponseEntity.ok(status);
@@ -121,7 +121,7 @@ public class QueueController {
 
     @PutMapping("/ticket/{ticketId}/status")
     public ResponseEntity<QueueTicketDto> updateQueueStatus(
-            @PathVariable Long ticketId,
+            @PathVariable Integer ticketId,
             @RequestParam QueueStatus status) {
         try {
             QueueTicketDto updatedTicket = queueService.updateQueueStatus(ticketId, status);
@@ -133,7 +133,7 @@ public class QueueController {
     
 
     @PutMapping("/ticket/{ticketId}/checked-in")
-    public ResponseEntity<QueueTicketDto> markAsCheckedIn(@PathVariable Long ticketId) {
+    public ResponseEntity<QueueTicketDto> markAsCheckedIn(@PathVariable Integer ticketId) {
         try {
             QueueTicketDto updatedTicket = queueService.markAsCheckedIn(ticketId);
             return ResponseEntity.ok(updatedTicket);
@@ -144,7 +144,7 @@ public class QueueController {
     
 
     @PutMapping("/ticket/{ticketId}/no-show")
-    public ResponseEntity<QueueTicketDto> markAsNoShow(@PathVariable Long ticketId) {
+    public ResponseEntity<QueueTicketDto> markAsNoShow(@PathVariable Integer ticketId) {
         try {
             QueueTicketDto updatedTicket = queueService.markAsNoShow(ticketId);
             return ResponseEntity.ok(updatedTicket);
@@ -155,7 +155,7 @@ public class QueueController {
     
 
     @PutMapping("/ticket/{ticketId}/completed")
-    public ResponseEntity<QueueTicketDto> markAsCompleted(@PathVariable Long ticketId) {
+    public ResponseEntity<QueueTicketDto> markAsCompleted(@PathVariable Integer ticketId) {
         try {
             QueueTicketDto updatedTicket = queueService.markAsCompleted(ticketId);
             return ResponseEntity.ok(updatedTicket);
@@ -167,7 +167,7 @@ public class QueueController {
 
     @PutMapping("/ticket/{ticketId}/fast-track")
     public ResponseEntity<QueueTicketDto> fastTrackPatient(
-            @PathVariable Long ticketId,
+            @PathVariable Integer ticketId,
             @RequestBody Map<String, String> request) {
         try {
             String reason = request.getOrDefault("reason", "Emergency/Priority");
@@ -182,7 +182,7 @@ public class QueueController {
     
 
     @DeleteMapping("/ticket/{ticketId}")
-    public ResponseEntity<Map<String, String>> cancelQueueTicket(@PathVariable Long ticketId) {
+    public ResponseEntity<Map<String, String>> cancelQueueTicket(@PathVariable Integer ticketId) {
         try {
             queueService.cancelQueueTicket(ticketId);
             Map<String, String> response = new HashMap<>();
@@ -218,11 +218,11 @@ public class QueueController {
     
 
     @GetMapping("/current/{doctorId}")
-    public ResponseEntity<Map<String, Integer>> getCurrentServingNumber(@PathVariable String doctorId) {
+    public ResponseEntity<Map<String, Integer>> getCurrentServingTicketId(@PathVariable String doctorId) {
         try {
-            Integer currentNumber = queueService.getCurrentServingNumber(doctorId);
+            Integer currentTicketId = queueService.getCurrentServingTicketId(doctorId);
             Map<String, Integer> response = new HashMap<>();
-            response.put("currentQueueNumber", currentNumber);
+            response.put("currentTicketId", currentTicketId);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);

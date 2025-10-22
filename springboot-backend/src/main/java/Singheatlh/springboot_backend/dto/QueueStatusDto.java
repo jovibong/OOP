@@ -11,7 +11,7 @@ import lombok.Setter;
 @AllArgsConstructor
 public class QueueStatusDto {
     
-    private Long ticketId;
+    private Integer ticketId;
     private Integer queueNumber;
     private Integer currentQueueNumber;
     private Integer positionInQueue;

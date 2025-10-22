@@ -13,11 +13,11 @@ import Singheatlh.springboot_backend.entity.QueueTicket;
 import Singheatlh.springboot_backend.entity.enums.QueueStatus;
 
 @Repository
-public interface QueueTicketRepository extends JpaRepository<QueueTicket, Long> {
+public interface QueueTicketRepository extends JpaRepository<QueueTicket, Integer> {
     
     // Find queue ticket by ID with appointment eagerly loaded
     @Query("SELECT qt FROM QueueTicket qt LEFT JOIN FETCH qt.appointment WHERE qt.ticketId = :ticketId")
-    Optional<QueueTicket> findByIdWithAppointment(@Param("ticketId") Long ticketId);
+    Optional<QueueTicket> findByIdWithAppointment(@Param("ticketId") Integer ticketId);
     
     // Find queue ticket by appointment ID (one to one)
     Optional<QueueTicket> findByAppointmentId(String appointmentId);
@@ -120,5 +120,5 @@ public interface QueueTicketRepository extends JpaRepository<QueueTicket, Long> 
         @Param("doctorId") String doctorId, 
         @Param("date") LocalDateTime date,
         @Param("queueNumber") Integer queueNumber,
-        @Param("ticketId") Long ticketId);
+        @Param("ticketId") Integer ticketId);
 }

@@ -30,7 +30,7 @@ public class QueueTicket {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ticket_id")
-    private Long ticketId;
+    private Integer ticketId;
     
     @Column(name = "appointment_id", nullable = false, unique = true, length = 10)
     private String appointmentId;

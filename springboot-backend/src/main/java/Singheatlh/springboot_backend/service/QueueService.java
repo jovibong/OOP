@@ -10,11 +10,11 @@ public interface QueueService {
     
     QueueTicketDto checkIn(String appointmentId);
     
-    QueueTicketDto getQueueTicketById(Long ticketId);
+    QueueTicketDto getQueueTicketById(Integer ticketId);
     
     QueueTicketDto getQueueTicketByAppointmentId(String appointmentId);
     
-    QueueStatusDto getQueueStatus(Long ticketId);
+    QueueStatusDto getQueueStatus(Integer ticketId);
     
     List<QueueTicketDto> getActiveQueueByDoctor(String doctorId);
     
@@ -22,23 +22,23 @@ public interface QueueService {
     
     QueueTicketDto callNextQueue(String doctorId);
     
-    QueueTicketDto updateQueueStatus(Long ticketId, QueueStatus status);
+    QueueTicketDto updateQueueStatus(Integer ticketId, QueueStatus status);
     
-    QueueTicketDto markAsCheckedIn(Long ticketId);
+    QueueTicketDto markAsCheckedIn(Integer ticketId);
     
-    QueueTicketDto markAsNoShow(Long ticketId);
+    QueueTicketDto markAsNoShow(Integer ticketId);
     
-    QueueTicketDto markAsCompleted(Long ticketId);
+    QueueTicketDto markAsCompleted(Integer ticketId);
     
-    QueueTicketDto fastTrackPatient(Long ticketId, String reason);
+    QueueTicketDto fastTrackPatient(Integer ticketId, String reason);
     
-    void cancelQueueTicket(Long ticketId);
+    void cancelQueueTicket(Integer ticketId);
     
     List<QueueTicketDto> getQueueTicketsByPatientId(java.util.UUID patientId);
     
     void processQueueNotifications(String doctorId);
     
-    Integer getCurrentServingNumber(String doctorId);
+    Integer getCurrentServingTicketId(String doctorId);
     
     Long getActiveQueueCount(String doctorId);
 }

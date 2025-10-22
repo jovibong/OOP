@@ -14,7 +14,7 @@ import lombok.Setter;
 @AllArgsConstructor
 public class QueueTicketDto {
     
-    private Long ticketId;
+    private Integer ticketId;
     private String appointmentId;
     private QueueStatus status;
     private LocalDateTime checkInTime;
