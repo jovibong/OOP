@@ -19,13 +19,6 @@ public class QueueTicketDto {
     private QueueStatus status;
     private LocalDateTime checkInTime;
     private Integer queueNumber;
-    private Integer clinicId;
-    private String clinicName;
-    private String doctorId;
-    private String doctorName;
-    private java.util.UUID patientId;
-    private String patientName;
     private Boolean isFastTracked;
     private String fastTrackReason;
-    private LocalDateTime appointmentDatetime;
 }

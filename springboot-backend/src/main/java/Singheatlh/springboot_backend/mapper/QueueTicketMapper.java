@@ -8,7 +8,7 @@ import Singheatlh.springboot_backend.entity.QueueTicket;
 @Component
 public class QueueTicketMapper {
     
-    // queueTicketDto is built here, the QueueStatusDto is populated in QueueServiceImpl instead due to flow
+    // Simplified mapper to match the minimal QueueTicketDto
     public QueueTicketDto toDto(QueueTicket queueTicket) {
         if (queueTicket == null) {
             return null;
@@ -22,30 +22,6 @@ public class QueueTicketMapper {
         dto.setQueueNumber(queueTicket.getQueueNumber());
         dto.setIsFastTracked(queueTicket.getIsFastTracked());
         dto.setFastTrackReason(queueTicket.getFastTrackReason());
-        
-        // Get data from related Appointment entity (using helper methods)
-        dto.setClinicId(queueTicket.getClinicId());
-        dto.setDoctorId(queueTicket.getDoctorId());
-        dto.setPatientId(queueTicket.getPatientId());
-        
-        // Set related entity information if loaded
-        if (queueTicket.getAppointment() != null) {
-            dto.setAppointmentDatetime(queueTicket.getAppointment().getStartDatetime());
-            
-            // Get patient name
-            if (queueTicket.getAppointment().getPatient() != null) {
-                dto.setPatientName(queueTicket.getAppointment().getPatient().getName());
-            }
-            
-            // Get doctor and clinic information
-            if (queueTicket.getAppointment().getDoctor() != null) {
-                dto.setDoctorName(queueTicket.getAppointment().getDoctor().getName());
-                
-                if (queueTicket.getAppointment().getDoctor().getClinic() != null) {
-                    dto.setClinicName(queueTicket.getAppointment().getDoctor().getClinic().getName());
-                }
-            }
-        }
         
         return dto;
     }

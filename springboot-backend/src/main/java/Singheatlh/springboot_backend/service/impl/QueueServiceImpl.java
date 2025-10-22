@@ -130,6 +130,19 @@ public class QueueServiceImpl implements QueueService {
         statusDto.setStatus(queueTicket.getStatus().toString());
         statusDto.setMessage(message);
         
+        // Populate names from appointment relationship
+        if (queueTicket.getAppointment() != null) {
+            if (queueTicket.getAppointment().getPatient() != null) {
+                statusDto.setPatientName(queueTicket.getAppointment().getPatient().getName());
+            }
+            if (queueTicket.getAppointment().getDoctor() != null) {
+                statusDto.setDoctorName(queueTicket.getAppointment().getDoctor().getName());
+                if (queueTicket.getAppointment().getDoctor().getClinic() != null) {
+                    statusDto.setClinicName(queueTicket.getAppointment().getDoctor().getClinic().getName());
+                }
+            }
+        }
+        
         return statusDto;
     }
 
