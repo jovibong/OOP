@@ -12,23 +12,23 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import Singheatlh.springboot_backend.dto.SmsRequest;
-import Singheatlh.springboot_backend.dto.SmsResponse;
+import Singheatlh.springboot_backend.dto.EmailRequest;
+import Singheatlh.springboot_backend.dto.EmailResponse;
 import Singheatlh.springboot_backend.entity.QueueTicket;
 import Singheatlh.springboot_backend.service.NotificationService;
 
 /**
  * Implementation of NotificationService
- * Integrated with SMU Lab Notification Service for sending SMS
- * Currently uses hardcoded phone number for testing
+ * Integrated with SMU Lab Notification Service for sending Email notifications
+ * Currently uses hardcoded email address for testing
  */
 @Service
 public class NotificationServiceImpl implements NotificationService {
     
     private static final Logger logger = LoggerFactory.getLogger(NotificationServiceImpl.class);
     
-    // Hardcoded phone number for testing
-    private static final String HARDCODED_PHONE_NUMBER = "+6594653483";
+    // Hardcoded email address for testing
+    private static final String HARDCODED_EMAIL_ADDRESS = "ashy.chung@gmail.com";
     
     @Autowired
     private RestTemplate restTemplate;
@@ -36,65 +36,77 @@ public class NotificationServiceImpl implements NotificationService {
     @Value("${smu.notification.api.base-url}")
     private String apiBaseUrl;
     
-    @Value("${smu.notification.api.send-sms-endpoint}")
-    private String sendSmsEndpoint;
+    @Value("${smu.notification.api.send-email-endpoint}")
+    private String sendEmailEndpoint;
     
     @Override
     public void sendQueueNotification3Away(QueueTicket queueTicket) {
+        String subject = "Queue Update - 3 Patients Away";
         String message = String.format(
-            "Queue #%d: You are currently 3 patients away. " +
-            "Please proceed closer to the consultation room.",
+            "Dear Patient,\n\n" +
+            "Queue #%d: You are currently 3 patients away from being called. " +
+            "Please proceed closer to the consultation room.\n\n" +
+            "Thank you for your patience.",
             queueTicket.getQueueNumber()
         );
         
-        logger.info("📱 NOTIFICATION [Patient ID: {}, Queue #{}]: {}", 
-            queueTicket.getPatientId(), queueTicket.getQueueNumber(), message);
+        logger.info("📧 EMAIL NOTIFICATION [Patient ID: {}, Queue #{}]: {}", 
+            queueTicket.getPatientId(), queueTicket.getQueueNumber(), subject);
         
-        // Send SMS via SMU Lab Notification Service
-        sendSms(queueTicket.getPatientId(), message);
+        // Send Email via SMU Lab Notification Service
+        sendEmail(queueTicket.getPatientId(), subject, message);
     }
     
     @Override
     public void sendQueueNotificationNext(QueueTicket queueTicket) {
+        String subject = "Queue Update - You're Next!";
         String message = String.format(
-            "Queue Number #%d: You are next. Please be ready.",
+            "Dear Patient,\n\n" +
+            "Queue Number #%d: You are next in line. " +
+            "Please be ready and stay close to the consultation room.\n\n" +
+            "Thank you for your patience.",
             queueTicket.getQueueNumber()
         );
         
-        logger.info("📱 NOTIFICATION [Patient ID: {}, Queue #{}]: {}", 
-            queueTicket.getPatientId(), queueTicket.getQueueNumber(), message);
+        logger.info("📧 EMAIL NOTIFICATION [Patient ID: {}, Queue #{}]: {}", 
+            queueTicket.getPatientId(), queueTicket.getQueueNumber(), subject);
         
-        // Send SMS via SMU Lab Notification Service
-        sendSms(queueTicket.getPatientId(), message);
+        // Send Email via SMU Lab Notification Service
+        sendEmail(queueTicket.getPatientId(), subject, message);
     }
     
     @Override
     public void sendQueueCalledNotification(QueueTicket queueTicket) {
+        String subject = "Queue Called - Your Turn Now!";
         String message = String.format(
-            "Queue #%d: It's your turn. Kindly enter the Room [Number]",
+            "Dear Patient,\n\n" +
+            "Queue #%d: It's your turn now. " +
+            "Please proceed to the consultation room immediately.\n\n" +
+            "Thank you for your cooperation.",
             queueTicket.getQueueNumber()
         );
         
-        logger.info("📱 NOTIFICATION [Patient ID: {}, Queue #{}]: {}", 
-            queueTicket.getPatientId(), queueTicket.getQueueNumber(), message);
+        logger.info("📧 EMAIL NOTIFICATION [Patient ID: {}, Queue #{}]: {}", 
+            queueTicket.getPatientId(), queueTicket.getQueueNumber(), subject);
         
-        // Send SMS via SMU Lab Notification Service
-        sendSms(queueTicket.getPatientId(), message);
+        // Send Email via SMU Lab Notification Service
+        sendEmail(queueTicket.getPatientId(), subject, message);
     }
     
     /**
-     * Send SMS using SMU Lab Notification Service API
-     * Currently uses hardcoded phone number for testing
+     * Send Email using SMU Lab Notification Service API
+     * Currently uses hardcoded email address for testing
      * @param patientId Patient ID (for logging purposes)
-     * @param message SMS message content
+     * @param subject Email subject line
+     * @param message Email message content
      */
-    private void sendSms(Long patientId, String message) {
+    private void sendEmail(java.util.UUID patientId, String subject, String message) {
         try {
-            // Use hardcoded phone number for testing
-            String phoneNumber = HARDCODED_PHONE_NUMBER;
+            // Use hardcoded email address for testing
+            String email = HARDCODED_EMAIL_ADDRESS;
             
-            // Prepare SMS request
-            SmsRequest smsRequest = new SmsRequest(phoneNumber, message);
+            // Prepare Email request
+            EmailRequest emailRequest = new EmailRequest(email, subject, message);
             
             // Prepare HTTP headers
             HttpHeaders headers = new HttpHeaders();
@@ -102,35 +114,35 @@ public class NotificationServiceImpl implements NotificationService {
             // Add authentication header if needed
             // headers.set("Authorization", "Bearer " + apiKey);
             
-            HttpEntity<SmsRequest> requestEntity = new HttpEntity<>(smsRequest, headers);
+            HttpEntity<EmailRequest> requestEntity = new HttpEntity<>(emailRequest, headers);
             
             // Call SMU Lab Notification Service API
-            String apiUrl = apiBaseUrl + sendSmsEndpoint;
+            String apiUrl = apiBaseUrl + sendEmailEndpoint;
             
-            logger.info("📤 Sending SMS to {} via {}", phoneNumber, apiUrl);
-            logger.debug("Request body: PhoneNumber={}, Message={}", phoneNumber, message);
+            logger.info("📤 Sending Email to {} via {}", email, apiUrl);
+            logger.debug("Request body: Email={}, Subject={}, Message={}", email, subject, message);
             
-            ResponseEntity<SmsResponse> response = restTemplate.exchange(
+            ResponseEntity<EmailResponse> response = restTemplate.exchange(
                 apiUrl,
                 HttpMethod.POST,
                 requestEntity,
-                SmsResponse.class
+                EmailResponse.class
             );
             
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                SmsResponse smsResponse = response.getBody();
-                if (smsResponse.isSuccess()) {
-                    logger.info("✅ SMS sent successfully to Patient {} (Phone: {})", 
-                        patientId, phoneNumber);
+                EmailResponse emailResponse = response.getBody();
+                if (emailResponse.isSuccess()) {
+                    logger.info("✅ Email sent successfully to Patient {} (Email: {})", 
+                        patientId, email);
                 } else {
-                    logger.warn("⚠️ SMS API returned failure: {}", smsResponse.getMessage());
+                    logger.warn("⚠️ Email API returned failure: {}", emailResponse.getMessage());
                 }
             } else {
-                logger.error("❌ SMS API returned non-2xx status: {}", response.getStatusCode());
+                logger.error("❌ Email API returned non-2xx status: {}", response.getStatusCode());
             }
             
         } catch (Exception e) {
-            logger.error("❌ Failed to send SMS to Patient {}: {}", patientId, e.getMessage(), e);
+            logger.error("❌ Failed to send Email to Patient {}: {}", patientId, e.getMessage(), e);
             // Don't throw exception - notification failure shouldn't break queue operations
         }
     }
