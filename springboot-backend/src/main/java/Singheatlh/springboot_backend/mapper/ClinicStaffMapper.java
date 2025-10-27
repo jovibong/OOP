@@ -9,28 +9,19 @@ import Singheatlh.springboot_backend.entity.Clinic;
 @Component
 public class ClinicStaffMapper {
 
-    public ClinicStaffDto toDto(ClinicStaff clinicStaff) {
-        if (clinicStaff == null)
-            return null;
+        public ClinicStaffDto toDto(ClinicStaff clinicStaff) {
+                if (clinicStaff == null)
+                        return null;
 
-        ClinicStaffDto dto = new ClinicStaffDto();
-<<<<<<< Updated upstream
-        dto.setUserId(clinicStaff.getUserId());
-        dto.setName(clinicStaff.getName());
-        dto.setEmail(clinicStaff.getEmail());
-        dto.setRole(clinicStaff.getRole());
-        dto.setTelephoneNumber(clinicStaff.getTelephoneNumber());
-        dto.setClinicId(clinicStaff.getClinicId());
-=======
-        dto.setId(clinicStaff.getUserId());
-        dto.setUsername(clinicStaff.getUsername());
-        dto.setName(clinicStaff.getName());
-        dto.setEmail(clinicStaff.getEmail());
-        dto.setRole(clinicStaff.getRole());
->>>>>>> Stashed changes
+                ClinicStaffDto dto = new ClinicStaffDto();
+                dto.setId(clinicStaff.getUserId());
+                dto.setUsername(clinicStaff.getUsername());
+                dto.setName(clinicStaff.getName());
+                dto.setEmail(clinicStaff.getEmail());
+                dto.setRole(clinicStaff.getRole());
 
-        return dto;
-    }
+                return dto;
+        }
 
     public ClinicStaff toEntity(ClinicStaffDto dto) {
         if (dto == null)
