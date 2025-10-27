@@ -66,3 +66,9 @@ spring.datasource.hikari.minimum-idle=2
 logging.level.org.flywaydb=INFO
 logging.level.org.hibernate.SQL=DEBUG
 logging.level.org.hibernate.type.descriptor.sql.BasicBinder=TRACE
+
+# =====================================================
+# Notification Service Configuration
+# =====================================================
+smu.notification.api.base-url=http://localhost:8081
+smu.notification.api.send-email-endpoint=/api/email/send
