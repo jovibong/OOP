@@ -48,7 +48,6 @@ const LoginPage = () => {
       const { error } = await signIn({ email, password });
       if (error) throw error;
 
-      console.log("Sign in successful, waiting for profile to load...");
       // Note: The redirect will happen via useEffect once userProfile is loaded from user_profile table
     } catch (error) {
       setError(error.message);

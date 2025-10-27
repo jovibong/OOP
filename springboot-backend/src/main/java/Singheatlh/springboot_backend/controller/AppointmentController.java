@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import Singheatlh.springboot_backend.dto.AppointmentDto;
 import Singheatlh.springboot_backend.dto.CreateAppointmentRequest;
@@ -213,6 +214,9 @@ public class AppointmentController {
         try {
             appointmentService.cancelAppointment(id);
             return ResponseEntity.ok().build();
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            // Return 400 with the service message
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
@@ -268,7 +272,7 @@ public class AppointmentController {
             AppointmentDto rescheduledAppointment = appointmentService.rescheduleAppointment(id, newDateTime);
             return ResponseEntity.ok(rescheduledAppointment);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         } catch (Exception e) {

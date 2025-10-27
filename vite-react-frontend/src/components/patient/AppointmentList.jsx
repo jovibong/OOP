@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-const AppointmentList = ({ appointments, onCancel }) => {
+const AppointmentList = ({ appointments, onCancel, onRequestReschedule }) => {
   const [filter, setFilter] = useState('all'); // all, upcoming, completed, cancelled
 
   const getStatusBadge = (status) => {
@@ -94,7 +94,7 @@ const AppointmentList = ({ appointments, onCancel }) => {
                     <h5 className="card-title mb-0 fw-bold">
                       {(() => {
                         const doctorName = appointment?.doctor?.name || appointment?.doctorName || appointment?.doctorId || 'Unknown';
-                        return `Dr. ${doctorName}`;
+                        return `${doctorName}`;
                       })()}
                     </h5>
                     <span className={`badge ${getStatusBadge(appointment.status)}`}>
@@ -126,15 +126,34 @@ const AppointmentList = ({ appointments, onCancel }) => {
                     </div>
                   </div>
 
-                  {(appointment.status || '').toUpperCase() === 'UPCOMING' && (
-                    <button
-                      className="btn btn-outline-danger btn-sm w-100"
-                      onClick={() => onCancel(appointment.appointmentId)}
-                    >
-                      <i className="bi bi-x-circle me-1"></i>
-                      Cancel Appointment
-                    </button>
-                  )}
+                  {(appointment.status || '').toUpperCase() === 'UPCOMING' && (() => {
+                    // Check if appointment is at least 24 hours away
+                    const appointmentTime = new Date(appointment.startDatetime);
+                    const now = new Date();
+                    const hoursDiff = (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+                    const canReschedule = hoursDiff >= 24;
+
+                    return (
+                      <div className="d-grid gap-2">
+                        <button
+                          className="btn btn-outline-danger btn-sm"
+                          onClick={() => onCancel(appointment.appointmentId)}
+                        >
+                          <i className="bi bi-x-circle me-1"></i>
+                          Cancel Appointment
+                        </button>
+                        {canReschedule && (
+                          <button
+                            className="btn btn-outline-primary btn-sm"
+                            onClick={() => onRequestReschedule && onRequestReschedule(appointment)}
+                          >
+                            <i className="bi bi-arrow-repeat me-1"></i>
+                            Reschedule
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </div>

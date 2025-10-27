@@ -293,7 +293,6 @@ const BookAppointmentModal = ({ show, onHide, onSuccess }) => {
                               </div>
                               <div>
                                 <h6 className="mb-0">Dr. {doctor.name}</h6>
-                                <small className="text-muted">ID: {doctor.doctorId}</small>
                               </div>
                             </div>
                           </div>
