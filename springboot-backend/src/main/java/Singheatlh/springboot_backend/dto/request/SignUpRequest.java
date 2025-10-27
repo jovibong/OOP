@@ -6,9 +6,10 @@ import lombok.Data;
 
 @Data
 public class SignUpRequest {
-    private String id;
+    private String userId;
 
-    @NotBlank @Email
+    @NotBlank
+    @Email
     private String email;
     private String name;
     private String role;

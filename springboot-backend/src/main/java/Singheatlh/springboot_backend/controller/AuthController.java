@@ -1,6 +1,5 @@
 package Singheatlh.springboot_backend.controller;
 
-
 import Singheatlh.springboot_backend.dto.UserDto;
 import Singheatlh.springboot_backend.dto.request.*;
 import Singheatlh.springboot_backend.service.AuthService;
@@ -54,46 +53,46 @@ public class AuthController {
     }
 
     @GetMapping("/profile")
-    public ResponseEntity<?> getCurrentUserProfile(@AuthenticationPrincipal String supabaseUid) {
-        log.debug("Fetching profile for user ID: {}", supabaseUid);
+    public ResponseEntity<?> getCurrentUserProfile(@AuthenticationPrincipal String userId) {
+        log.debug("Fetching profile for user ID: {}", userId);
 
         try {
-            UserDto userDto = authService.getCurrentUserProfile(supabaseUid);
+            UserDto userDto = authService.getCurrentUserProfile(userId);
             return ResponseEntity.ok(userDto);
 
         } catch (RuntimeException e) {
-            log.error("Failed to fetch profile for user ID: {}", supabaseUid, e);
+            log.error("Failed to fetch profile for user ID: {}", userId, e);
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new ErrorResponse(e.getMessage()));
         }
     }
 
     @PutMapping("/email")
-    public ResponseEntity<?> updateEmail(@AuthenticationPrincipal String supabaseUid,
-                                         @RequestBody UpdateEmailRequest updateRequest) {
-        log.info("Updating email for user ID: {}", supabaseUid);
+    public ResponseEntity<?> updateEmail(@AuthenticationPrincipal String userId,
+            @RequestBody UpdateEmailRequest updateRequest) {
+        log.info("Updating email for user ID: {}", userId);
 
         try {
-            authService.updateEmail(supabaseUid, updateRequest.getNewEmail(), updateRequest.getCurrentPassword());
+            authService.updateEmail(userId, updateRequest.getNewEmail(), updateRequest.getCurrentPassword());
             return ResponseEntity.ok(new MessageResponse("Email updated successfully"));
 
         } catch (RuntimeException e) {
-            log.error("Email update failed for user ID: {}", supabaseUid, e);
+            log.error("Email update failed for user ID: {}", userId, e);
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         }
     }
 
     @PutMapping("/password")
-    public ResponseEntity<?> changePassword(@AuthenticationPrincipal String supabaseUid,
-                                            @RequestBody ChangePasswordRequest changeRequest) {
-        log.info("Changing password for user ID: {}", supabaseUid);
+    public ResponseEntity<?> changePassword(@AuthenticationPrincipal String userId,
+            @RequestBody ChangePasswordRequest changeRequest) {
+        log.info("Changing password for user ID: {}", userId);
 
         try {
-            authService.changePassword(supabaseUid, changeRequest.getCurrentPassword(), changeRequest.getNewPassword());
+            authService.changePassword(userId, changeRequest.getCurrentPassword(), changeRequest.getNewPassword());
             return ResponseEntity.ok(new MessageResponse("Password change initiated"));
 
         } catch (RuntimeException e) {
-            log.error("Password change failed for user ID: {}", supabaseUid, e);
+            log.error("Password change failed for user ID: {}", userId, e);
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         }
     }
@@ -141,8 +140,13 @@ public class AuthController {
             this.error = error;
         }
 
-        public String getError() { return error; }
-        public void setError(String error) { this.error = error; }
+        public String getError() {
+            return error;
+        }
+
+        public void setError(String error) {
+            this.error = error;
+        }
     }
 
     public static class MessageResponse {
@@ -152,8 +156,13 @@ public class AuthController {
             this.message = message;
         }
 
-        public String getMessage() { return message; }
-        public void setMessage(String message) { this.message = message; }
+        public String getMessage() {
+            return message;
+        }
+
+        public void setMessage(String message) {
+            this.message = message;
+        }
     }
 
     public static class TokenValidationResponse {
@@ -165,9 +174,20 @@ public class AuthController {
             this.userId = userId;
         }
 
-        public boolean isValid() { return valid; }
-        public void setValid(boolean valid) { this.valid = valid; }
-        public String getUserId() { return userId; }
-        public void setUserId(String userId) { this.userId = userId; }
+        public boolean isValid() {
+            return valid;
+        }
+
+        public void setValid(boolean valid) {
+            this.valid = valid;
+        }
+
+        public String getUserId() {
+            return userId;
+        }
+
+        public void setUserId(String userId) {
+            this.userId = userId;
+        }
     }
 }
