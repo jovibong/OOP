@@ -10,6 +10,7 @@ import Singheatlh.springboot_backend.repository.DoctorRepository;
 import Singheatlh.springboot_backend.service.DoctorService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -23,22 +24,21 @@ public class DoctorServiceImpl implements DoctorService {
     private final DoctorMapper doctorMapper;
 
     @Override
-    public DoctorDto getById(Long id) {
-        String doctorId = String.valueOf(id);
-        Doctor doctor = doctorRepository.findById(doctorId).orElseThrow(
-                () -> new ResourceNotFoundExecption("Doctor does not exist with the given id " + id)
-        );
+    public DoctorDto getById(String id) {
+        Doctor doctor = doctorRepository.findById(id).orElseThrow(
+                () -> new ResourceNotFoundExecption("Doctor does not exist with the given id " + id));
         return doctorMapper.toDto(doctor);
     }
 
     @Override
+    @Transactional
     public DoctorDto createDoctor(DoctorDto doctorDto) {
         Doctor doctor = doctorMapper.toEntity(doctorDto);
 
         if (doctorDto.getClinicId() != null) {
             Clinic clinic = clinicRepository.findById(doctorDto.getClinicId()).orElseThrow(
-                    () -> new ResourceNotFoundExecption("Clinic does not exist with the given id " + doctorDto.getClinicId())
-            );
+                    () -> new ResourceNotFoundExecption(
+                            "Clinic does not exist with the given id " + doctorDto.getClinicId()));
             doctor.setClinic(clinic);
         }
 
@@ -63,20 +63,19 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
+    @Transactional
     public DoctorDto updateDoctor(DoctorDto doctorDto) {
         Doctor doctor = doctorRepository.findById(doctorDto.getDoctorId()).orElseThrow(
-                () -> new ResourceNotFoundExecption("Doctor does not exist with the given id " + doctorDto.getDoctorId())
-        );
+                () -> new ResourceNotFoundExecption(
+                        "Doctor does not exist with the given id " + doctorDto.getDoctorId()));
 
         doctor.setName(doctorDto.getName());
 
         if (doctorDto.getClinicId() != null) {
             Clinic clinic = clinicRepository.findById(doctorDto.getClinicId()).orElseThrow(
-                    () -> new ResourceNotFoundExecption("Clinic does not exist with the given id " + doctorDto.getClinicId())
-            );
-            doctor.setClinic(clinic);
-        } else {
-            doctor.setClinic(null);
+                    () -> new ResourceNotFoundExecption(
+                            "Clinic does not exist with the given id " + doctorDto.getClinicId()));
+            doctor.setClinicId(doctorDto.getClinicId());
         }
 
         Doctor savedDoctor = doctorRepository.save(doctor);
@@ -84,11 +83,15 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
-    public void deleteDoctor(Long id) {
-        String doctorId = String.valueOf(id);
-        doctorRepository.findById(doctorId).orElseThrow(
-                () -> new ResourceNotFoundExecption("Doctor does not exist with the given id " + id)
-        );
-        doctorRepository.deleteById(doctorId);
+    @Transactional
+    public void deleteDoctor(String id) {
+        doctorRepository.findById(id).orElseThrow(
+                () -> new ResourceNotFoundExecption("Doctor does not exist with the given id " + id));
+        doctorRepository.deleteById(id);
+    }
+
+    @Override
+    public int getDoctorCount() {
+        return (int) doctorRepository.count();
     }
 }
