@@ -1,5 +1,6 @@
 import { useAuth } from "../../contexts/AuthContext";
 import { Link } from "react-router-dom";
+import TodayCheckIn from '../../components/patient/TodayCheckIn';
 
 const HomePage = () => {
   const { userProfile } = useAuth();
@@ -17,6 +18,13 @@ const HomePage = () => {
               <p className="lead text-muted mb-4">
                 Manage your healthcare appointments with ease.
               </p>
+            </div>
+
+            {/* Today Appointment / Check-in */}
+            <div className="row g-4 mt-4">
+              <div className="col-12">
+                <TodayCheckIn />
+              </div>
             </div>
 
             <div className="row g-4 mt-4">

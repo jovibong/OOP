@@ -26,13 +26,11 @@ export const AuthProvider = ({ children }) => {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       setUser(session?.user ?? null);
-      console.log(session?.user);
       if (session?.user) {
         // Fetch user profile from backend
         try {
           const response = await apiClient.get(`/api/users/${session.user.id}`);
           setUserProfile(response.data);
-          console.log("Fetched user profile:", response.data);
         } catch (error) {
           console.error("Failed to fetch user profile:", error);
         }
