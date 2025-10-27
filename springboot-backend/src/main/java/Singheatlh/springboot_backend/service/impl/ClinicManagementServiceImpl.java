@@ -1,5 +1,13 @@
 package Singheatlh.springboot_backend.service.impl;
 
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import Singheatlh.springboot_backend.dto.ClinicDto;
 import Singheatlh.springboot_backend.entity.Clinic;
 import Singheatlh.springboot_backend.exception.ResourceNotFoundExecption;
@@ -7,13 +15,6 @@ import Singheatlh.springboot_backend.mapper.ClinicMapper;
 import Singheatlh.springboot_backend.repository.ClinicRepository;
 import Singheatlh.springboot_backend.service.ClinicManagementService;
 import lombok.AllArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
@@ -73,6 +74,13 @@ public class ClinicManagementServiceImpl implements ClinicManagementService {
         List<Clinic> clinics = clinicRepository.findByType(type);
         return clinics.stream().map(clinicMapper::toDto).collect(Collectors.toList());
     }
+    
+    @Override
+    public ClinicDto getClinicByName(String name) {
+        Clinic clinic = clinicRepository.findByName(name)
+                .orElseThrow(() -> new ResourceNotFoundExecption("Clinic not found with name: " + name));
+        return clinicMapper.toDto(clinic);
+    }
 
     @Override
     @Transactional
@@ -97,18 +105,6 @@ public class ClinicManagementServiceImpl implements ClinicManagementService {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
         clinic.setOpeningHours(LocalTime.parse(openingHours, formatter));
         clinic.setClosingHours(LocalTime.parse(closingHours, formatter));
-
-        Clinic updatedClinic = clinicRepository.save(clinic);
-        return clinicMapper.toDto(updatedClinic);
-    }
-
-    @Override
-    @Transactional
-    public ClinicDto setAppointmentSlotDuration(Integer clinicId, Integer slotDuration) {
-        Clinic clinic = clinicRepository.findById(clinicId)
-                .orElseThrow(() -> new ResourceNotFoundExecption("Clinic not found with id: " + clinicId));
-
-        clinic.setAppointmentSlotDuration(slotDuration);
 
         Clinic updatedClinic = clinicRepository.save(clinic);
         return clinicMapper.toDto(updatedClinic);

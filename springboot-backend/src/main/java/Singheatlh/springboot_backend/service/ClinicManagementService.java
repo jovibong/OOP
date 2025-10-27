@@ -1,8 +1,8 @@
 package Singheatlh.springboot_backend.service;
 
-import Singheatlh.springboot_backend.dto.ClinicDto;
-
 import java.util.List;
+
+import Singheatlh.springboot_backend.dto.ClinicDto;
 
 public interface ClinicManagementService {
 
@@ -23,13 +23,13 @@ public interface ClinicManagementService {
 
     // Get clinics by type (GP or Specialist)
     List<ClinicDto> getClinicsByType(String type);
+    
+    // Get clinic by name
+    ClinicDto getClinicByName(String name);
 
     // Import clinic data (for bulk operations)
     List<ClinicDto> importClinics(List<ClinicDto> clinics);
 
     // Set clinic hours
     ClinicDto setClinicHours(Integer clinicId, String openingHours, String closingHours);
-
-    // Set appointment slot duration
-    ClinicDto setAppointmentSlotDuration(Integer clinicId, Integer slotDuration);
 }
