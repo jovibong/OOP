@@ -1,8 +1,8 @@
-import React from "react";
 import { Link } from "react-router-dom";
-import { useAuth } from "../../contexts/AuthContext";
+import { useDashboardCounts } from "../../hooks/useDashboardCounts";
 
 const AdminDashboardPage = () => {
+  const { userCount, doctorCount, clinicCount } = useDashboardCounts();
   return (
     <div className="container-fluid py-4">
       {/* Welcome Header */}
@@ -33,7 +33,7 @@ const AdminDashboardPage = () => {
                   <p className="text-muted mb-1 text-uppercase small fw-semibold">
                     Total Users
                   </p>
-                  <h3 className="fw-bold mb-0">1,234</h3>
+                  <h3 className="fw-bold mb-0">{userCount ? userCount : ""}</h3>
                 </div>
                 <div className="rounded-circle bg-primary bg-opacity-10 p-3">
                   <i
@@ -54,7 +54,9 @@ const AdminDashboardPage = () => {
                   <p className="text-muted mb-1 text-uppercase small fw-semibold">
                     Total Doctors
                   </p>
-                  <h3 className="fw-bold mb-0">89</h3>
+                  <h3 className="fw-bold mb-0">
+                    {doctorCount ? doctorCount : ""}
+                  </h3>
                 </div>
                 <div className="rounded-circle bg-success bg-opacity-10 p-3">
                   <i
@@ -75,7 +77,9 @@ const AdminDashboardPage = () => {
                   <p className="text-muted mb-1 text-uppercase small fw-semibold">
                     Total Clinics
                   </p>
-                  <h3 className="fw-bold mb-0">24</h3>
+                  <h3 className="fw-bold mb-0">
+                    {clinicCount ? clinicCount : ""}
+                  </h3>
                 </div>
                 <div className="rounded-circle bg-info bg-opacity-10 p-3">
                   <i

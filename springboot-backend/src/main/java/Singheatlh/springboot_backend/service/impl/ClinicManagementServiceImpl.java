@@ -109,4 +109,9 @@ public class ClinicManagementServiceImpl implements ClinicManagementService {
         Clinic updatedClinic = clinicRepository.save(clinic);
         return clinicMapper.toDto(updatedClinic);
     }
+
+    @Override
+    public int getClinicCount() {
+        return (int) clinicRepository.count();
+    }
 }

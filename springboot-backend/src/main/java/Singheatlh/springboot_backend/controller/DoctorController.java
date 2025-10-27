@@ -42,7 +42,8 @@ public class DoctorController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<DoctorDto> updateDoctor(@PathVariable("id") String doctorId, @Valid @RequestBody DoctorDto doctorDto) {
+    public ResponseEntity<DoctorDto> updateDoctor(@PathVariable("id") String doctorId,
+            @Valid @RequestBody DoctorDto doctorDto) {
         doctorDto.setDoctorId(doctorId);
         DoctorDto updatedDoctor = doctorService.updateDoctor(doctorDto);
         return ResponseEntity.ok(updatedDoctor);
@@ -52,5 +53,11 @@ public class DoctorController {
     public ResponseEntity<String> deleteDoctor(@PathVariable("id") String doctorId) {
         doctorService.deleteDoctor(doctorId);
         return ResponseEntity.ok("Doctor deleted successfully!");
+    }
+
+    @GetMapping("/count")
+    public ResponseEntity<Integer> getDoctorCount() {
+        int count = doctorService.getDoctorCount();
+        return ResponseEntity.ok(count);
     }
 }
