@@ -68,7 +68,10 @@ logging.level.org.hibernate.SQL=DEBUG
 logging.level.org.hibernate.type.descriptor.sql.BasicBinder=TRACE
 
 # =====================================================
-# Notification Service Configuration
+# SMU Lab Notification Service Configuration
 # =====================================================
-smu.notification.api.base-url=http://localhost:8081
-smu.notification.api.send-email-endpoint=/api/email/send
+# Base URL for the notification API
+smu.notification.api.base-url=<TAKE_THE_NOTIFICATION_URL_FROM_GROUP_CHAT>
+
+# Email endpoint for sending email notifications
+smu.notification.api.send-email-endpoint=/SendEmail
