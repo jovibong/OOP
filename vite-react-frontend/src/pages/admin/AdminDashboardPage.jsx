@@ -3,8 +3,6 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 
 const AdminDashboardPage = () => {
-  const { user } = useAuth();
-
   return (
     <div className="container-fluid py-4">
       {/* Welcome Header */}
