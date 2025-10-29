@@ -90,6 +90,67 @@ public interface AppointmentRepository extends JpaRepository<Appointment, String
            "AND DATE(a.startDatetime) = DATE(:date) " +
            "ORDER BY a.startDatetime ASC")
     List<Appointment> findTodayAppointmentsByDoctorId(
-        @Param("doctorId") String doctorId, 
+        @Param("doctorId") String doctorId,
         @Param("date") LocalDateTime date);
+
+    // ========== Clinic Staff Queries ==========
+
+    // Find all appointments for a specific clinic
+    @Query("SELECT a FROM Appointment a " +
+           "LEFT JOIN FETCH a.patient " +
+           "LEFT JOIN FETCH a.doctor d " +
+           "LEFT JOIN FETCH d.clinic " +
+           "WHERE d.clinicId = :clinicId " +
+           "ORDER BY a.startDatetime ASC")
+    List<Appointment> findByClinicId(@Param("clinicId") Integer clinicId);
+
+    // Find appointments for a clinic with specific status
+    @Query("SELECT a FROM Appointment a " +
+           "LEFT JOIN FETCH a.patient " +
+           "LEFT JOIN FETCH a.doctor d " +
+           "LEFT JOIN FETCH d.clinic " +
+           "WHERE d.clinicId = :clinicId " +
+           "AND a.status = :status " +
+           "ORDER BY a.startDatetime ASC")
+    List<Appointment> findByClinicIdAndStatus(
+        @Param("clinicId") Integer clinicId,
+        @Param("status") AppointmentStatus status);
+
+    // Find today's appointments for a clinic
+    @Query("SELECT a FROM Appointment a " +
+           "LEFT JOIN FETCH a.patient " +
+           "LEFT JOIN FETCH a.doctor d " +
+           "LEFT JOIN FETCH d.clinic " +
+           "WHERE d.clinicId = :clinicId " +
+           "AND DATE(a.startDatetime) = DATE(:date) " +
+           "ORDER BY a.startDatetime ASC")
+    List<Appointment> findTodayAppointmentsByClinicId(
+        @Param("clinicId") Integer clinicId,
+        @Param("date") LocalDateTime date);
+
+    // Find appointments for a clinic within a date range
+    @Query("SELECT a FROM Appointment a " +
+           "LEFT JOIN FETCH a.patient " +
+           "LEFT JOIN FETCH a.doctor d " +
+           "LEFT JOIN FETCH d.clinic " +
+           "WHERE d.clinicId = :clinicId " +
+           "AND a.startDatetime BETWEEN :startDate AND :endDate " +
+           "ORDER BY a.startDatetime ASC")
+    List<Appointment> findByClinicIdAndDateRange(
+        @Param("clinicId") Integer clinicId,
+        @Param("startDate") LocalDateTime startDate,
+        @Param("endDate") LocalDateTime endDate);
+
+    // Find upcoming appointments for a clinic
+    @Query("SELECT a FROM Appointment a " +
+           "LEFT JOIN FETCH a.patient " +
+           "LEFT JOIN FETCH a.doctor d " +
+           "LEFT JOIN FETCH d.clinic " +
+           "WHERE d.clinicId = :clinicId " +
+           "AND a.startDatetime > :currentTime " +
+           "AND a.status = 'Upcoming' " +
+           "ORDER BY a.startDatetime ASC")
+    List<Appointment> findUpcomingAppointmentsByClinicId(
+        @Param("clinicId") Integer clinicId,
+        @Param("currentTime") LocalDateTime currentTime);
 }

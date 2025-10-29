@@ -280,7 +280,88 @@ public class AppointmentController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
-    
+
+    // ========== Clinic Staff Endpoints ==========
+
+    /**
+     * Get all appointments for a specific clinic
+     * Clinic staff can view all appointments for their clinic
+     */
+    @GetMapping("/clinic/{clinicId}")
+    public ResponseEntity<List<AppointmentDto>> getAppointmentsByClinic(@PathVariable Integer clinicId) {
+        try {
+            List<AppointmentDto> appointments = appointmentService.getAppointmentsByClinicId(clinicId);
+            return ResponseEntity.ok(appointments);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Get appointments for a clinic filtered by status
+     */
+    @GetMapping("/clinic/{clinicId}/status/{status}")
+    public ResponseEntity<List<AppointmentDto>> getAppointmentsByClinicAndStatus(
+            @PathVariable Integer clinicId,
+            @PathVariable AppointmentStatus status) {
+        try {
+            List<AppointmentDto> appointments = appointmentService.getAppointmentsByClinicIdAndStatus(clinicId, status);
+            return ResponseEntity.ok(appointments);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Get today's appointments for a specific clinic
+     * Useful for clinic staff to see the daily schedule
+     */
+    @GetMapping("/clinic/{clinicId}/today")
+    public ResponseEntity<List<AppointmentDto>> getTodayAppointmentsByClinic(@PathVariable Integer clinicId) {
+        try {
+            List<AppointmentDto> appointments = appointmentService.getTodayAppointmentsByClinicId(clinicId);
+            return ResponseEntity.ok(appointments);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Get appointments for a clinic within a date range
+     * Useful for viewing appointments in a specific week/month
+     */
+    @GetMapping("/clinic/{clinicId}/date-range")
+    public ResponseEntity<List<AppointmentDto>> getAppointmentsByClinicAndDateRange(
+            @PathVariable Integer clinicId,
+            @RequestParam LocalDateTime startDate,
+            @RequestParam LocalDateTime endDate) {
+        try {
+            if (startDate == null || endDate == null) {
+                return ResponseEntity.badRequest().build();
+            }
+            List<AppointmentDto> appointments = appointmentService.getAppointmentsByClinicIdAndDateRange(
+                clinicId, startDate, endDate
+            );
+            return ResponseEntity.ok(appointments);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Get upcoming appointments for a specific clinic
+     * Shows all future appointments for the clinic
+     */
+    @GetMapping("/clinic/{clinicId}/upcoming")
+    public ResponseEntity<List<AppointmentDto>> getUpcomingAppointmentsByClinic(@PathVariable Integer clinicId) {
+        try {
+            List<AppointmentDto> appointments = appointmentService.getUpcomingAppointmentsByClinicId(clinicId);
+            return ResponseEntity.ok(appointments);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
     // Simple error response class
     private static class ErrorResponse {
         private final String message;

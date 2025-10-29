@@ -42,7 +42,48 @@ public interface AppointmentService {
     
     
     List<AppointmentDto> getAppointmentsByStatus(AppointmentStatus status);
-    
-    
+
+
     List<LocalDateTime> getAvailableSlots(String doctorId, LocalDateTime date);
+
+    // ========== Clinic Staff Methods ==========
+
+    /**
+     * Get all appointments for a specific clinic
+     * @param clinicId The clinic ID
+     * @return List of all appointments for the clinic
+     */
+    List<AppointmentDto> getAppointmentsByClinicId(Integer clinicId);
+
+    /**
+     * Get appointments for a clinic filtered by status
+     * @param clinicId The clinic ID
+     * @param status The appointment status
+     * @return List of appointments matching the criteria
+     */
+    List<AppointmentDto> getAppointmentsByClinicIdAndStatus(Integer clinicId, AppointmentStatus status);
+
+    /**
+     * Get today's appointments for a specific clinic
+     * @param clinicId The clinic ID
+     * @return List of today's appointments for the clinic
+     */
+    List<AppointmentDto> getTodayAppointmentsByClinicId(Integer clinicId);
+
+    /**
+     * Get appointments for a clinic within a date range
+     * @param clinicId The clinic ID
+     * @param startDate Start of date range
+     * @param endDate End of date range
+     * @return List of appointments in the date range
+     */
+    List<AppointmentDto> getAppointmentsByClinicIdAndDateRange(
+        Integer clinicId, LocalDateTime startDate, LocalDateTime endDate);
+
+    /**
+     * Get upcoming appointments for a specific clinic
+     * @param clinicId The clinic ID
+     * @return List of upcoming appointments for the clinic
+     */
+    List<AppointmentDto> getUpcomingAppointmentsByClinicId(Integer clinicId);
 }
