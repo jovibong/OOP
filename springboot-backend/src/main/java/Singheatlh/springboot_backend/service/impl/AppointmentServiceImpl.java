@@ -264,4 +264,58 @@ public class AppointmentServiceImpl implements AppointmentService {
         
         return availableSlots;
     }
+
+    // ========== Clinic Staff Methods ==========
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AppointmentDto> getAppointmentsByClinicId(Integer clinicId) {
+        List<Appointment> appointments = appointmentRepository.findByClinicId(clinicId);
+        return appointments.stream()
+                .map(appointmentMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AppointmentDto> getAppointmentsByClinicIdAndStatus(Integer clinicId, AppointmentStatus status) {
+        List<Appointment> appointments = appointmentRepository.findByClinicIdAndStatus(clinicId, status);
+        return appointments.stream()
+                .map(appointmentMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AppointmentDto> getTodayAppointmentsByClinicId(Integer clinicId) {
+        List<Appointment> appointments = appointmentRepository.findTodayAppointmentsByClinicId(
+            clinicId, LocalDateTime.now()
+        );
+        return appointments.stream()
+                .map(appointmentMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AppointmentDto> getAppointmentsByClinicIdAndDateRange(
+            Integer clinicId, LocalDateTime startDate, LocalDateTime endDate) {
+        List<Appointment> appointments = appointmentRepository.findByClinicIdAndDateRange(
+            clinicId, startDate, endDate
+        );
+        return appointments.stream()
+                .map(appointmentMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AppointmentDto> getUpcomingAppointmentsByClinicId(Integer clinicId) {
+        List<Appointment> appointments = appointmentRepository.findUpcomingAppointmentsByClinicId(
+            clinicId, LocalDateTime.now()
+        );
+        return appointments.stream()
+                .map(appointmentMapper::toDto)
+                .collect(Collectors.toList());
+    }
 }
