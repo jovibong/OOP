@@ -41,6 +41,27 @@ spring.datasource.password=your-super-secret-and-long-postgres-password
 psql -h localhost -p 5434 -U postgres -d postgres
 ```
 
+### Quick Start (with Auto-seeding)
+
+Run this single command to set up everything:
+
+```bash
+npm run dev:setup
+```
+
+**What happens automatically:**
+1. ✅ Installs npm dependencies
+2. ✅ Starts Docker database (PostgreSQL + Supabase services)
+3. ✅ Builds Spring Boot backend
+4. ✅ **Backend starts → Flyway runs migrations:**
+   - V1: Creates database schema
+   - V2: Creates auth trigger
+   - **V3: Auto-loads ~600K records from CSV files** (no manual seeding needed!)
+5. ✅ Starts React frontend
+6. ✅ Opens both backend (port 8080) and frontend (port 5173)
+
+**Result:** Fully populated database with realistic test data ready to use!
+
 ---
 
 ## Database Migrations with Flyway
@@ -147,10 +168,96 @@ ORDER BY installed_rank;
 - **Tables:** Clinic, User_Profile, Doctor, Schedule, Appointment, Queue_Ticket, Medical_Summary
 - **Constraints:** All primary keys, foreign keys, check constraints
 - **Indexes:** 13 performance indexes
+- **Queue_Ticket Status Constraint:** Valid statuses are `CHECKED_IN`, `CALLED`, `IN_CONSULTATION`, `COMPLETED`, `NO_SHOW`, `FAST_TRACKED`
 
 ### V2: Auth Trigger
 - **Purpose:** Auto-create User_Profile when users sign up via Supabase
 - **Behavior:** New users get default role 'P' (Patient)
+
+### V3: Sample Data Population (CSV-based) - **Auto-seeding**
+- **Purpose:** Automatically populate database with sample data when backend starts
+- **Method:** Flyway migration uses PostgreSQL `COPY` command to bulk-load CSV files
+- **When it runs:** Automatically on first backend startup after database reset
+- **Tables Populated:** Clinic (~1700), User_Profile (~3300), Doctor (~6000), Schedule (~600K), Appointment (5000), Medical_Summary (~1200), Queue_Ticket (~200)
+- **Requirements:**
+  - CSV files must exist in `db/sample-data/` directory (pre-generated)
+  - Docker volume mount: `./sample-data:/sample-data:ro` (configured in `db/docker-compose.yml`)
+  - No manual seeding needed - runs automatically via Flyway
+
+---
+
+## Mock Data Generation
+
+### Generating Sample Data
+
+A Python script is provided to generate realistic, relationally-consistent mock data for testing and development.
+
+**Location:** `db/generate_mock_data.py`
+
+**Requirements:**
+- Python 3.7+
+- Existing clinic data in `db/sample-data/clinics.csv`
+
+**Usage:**
+```bash
+# Run from project root
+python db/generate_mock_data.py
+```
+
+**What it generates:**
+
+| File | Records | Description |
+|------|---------|-------------|
+| `user_profile.csv` | ~3000+ | 1 system admin, 1-2 staff per clinic, 800 patients |
+| `doctor.csv` | ~6000+ | 2-5 doctors per clinic |
+| `schedule.csv` | ~600000+ | Schedules from 7 days ago through Nov 15, 2025 with AVAILABLE/UNAVAILABLE blocks |
+| `appointment.csv` | 5000 | Appointments in 15-min slots, with past/present/future dates |
+| `medical_summary.csv` | ~1200+ | Summaries for all completed appointments |
+| `queue_ticket.csv` | ~200 | Tickets for today's appointments with realistic statuses |
+
+**Data Integrity:**
+- All foreign key relationships are maintained
+- Appointments fit within doctor's AVAILABLE schedule blocks
+- No overlapping appointments for same doctor
+- Schedule blocks respect clinic opening/closing hours
+- Queue tickets only for today's appointments
+- Medical summaries only for completed appointments
+
+**Realistic Queue/Appointment Scenarios:**
+
+The script simulates realistic patient arrival patterns for today's appointments:
+
+| Scenario | Probability | Behavior | Result |
+|----------|-------------|----------|--------|
+| **Early arrival** | 35% | Arrive 5-30 min before appointment | Queue ticket with `CHECKED_IN` status |
+| **On-time** | 30% | Arrive 0-5 min before appointment | Queue ticket with `CHECKED_IN` status |
+| **Late arrival** | 20% | Arrive 5-20 min after appointment | Queue ticket with late check-in time |
+| **Very late** | 10% | Arrive 20-40 min after appointment | Queue ticket with very late check-in |
+| **No-show** | 5% | Don't show up at all | No queue ticket, appointment marked as `Missed` |
+
+Queue tickets for appointments earlier today (before 2pm) will show progression through the queue:
+- `COMPLETED` - For appointments that happened 1+ hours ago
+- `IN_CONSULTATION` - For appointments 30-60 minutes ago
+- `CALLED` - For recent appointments
+- `CHECKED_IN` - For future appointments today
+
+**Configuration:**
+Edit these constants in `generate_mock_data.py` to adjust data volume:
+```python
+NUM_PATIENTS = 800                          # Number of patient users
+NUM_APPOINTMENTS = 5000                     # Total appointments to generate
+TODAY = datetime(2025, 10, 29)              # Reference date for "today"
+SCHEDULE_END_DATE = datetime(2025, 11, 15)  # Schedules extend to this date
+
+# Adjust arrival probabilities
+ARRIVAL_SCENARIOS = {
+    "early": 0.35,      # 35% arrive 5-30 min early
+    "on_time": 0.30,    # 30% arrive 0-5 min early
+    "late": 0.20,       # 20% arrive 5-20 min late
+    "very_late": 0.10,  # 10% arrive 20-40 min late
+    "no_show": 0.05     # 5% don't show up
+}
+```
 
 ---
 
