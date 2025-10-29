@@ -84,3 +84,8 @@ dist-ssr/
 *.njsproj
 *.sln
 *.sw?
+
+# ----------------------------------
+# Local Database Volumes
+# ----------------------------------
+db/volumes/
