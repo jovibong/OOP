@@ -86,17 +86,19 @@ CREATE TABLE Appointment (
 -- =====================================================
 -- Table: Queue_Ticket
 -- Description: Manages queue tickets for checked-in appointments
+-- Valid statuses: CHECKED_IN, CALLED, IN_CONSULTATION, COMPLETED, NO_SHOW, FAST_TRACKED
+-- Note: Notifications ("3 away", "next") are triggered programmatically without changing status
 -- =====================================================
 CREATE TABLE Queue_Ticket (
     ticket_id SERIAL PRIMARY KEY,
     appointment_id CHAR(10) NOT NULL UNIQUE,
-    status VARCHAR(20),
+    status VARCHAR(20) NOT NULL CHECK (status IN ('CHECKED_IN', 'CALLED', 'IN_CONSULTATION', 'COMPLETED', 'NO_SHOW', 'FAST_TRACKED')),
     check_in_time TIMESTAMP,
     queue_number INTEGER NOT NULL,
     is_fast_tracked BOOLEAN DEFAULT FALSE,
     fast_track_reason VARCHAR(255),
-    CONSTRAINT fk_queue_appointment FOREIGN KEY (appointment_id) 
-        REFERENCES Appointment(appointment_id) 
+    CONSTRAINT fk_queue_appointment FOREIGN KEY (appointment_id)
+        REFERENCES Appointment(appointment_id)
         ON DELETE CASCADE
 );
 
