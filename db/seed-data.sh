@@ -29,7 +29,7 @@ DB_PORT="5434"
 DB_CONTAINER="supabase-db"
 
 # Sample data directory
-DATA_DIR="sample-data"
+DATA_DIR="sample-data-mini"
 
 # Function to execute SQL command via docker
 execute_sql() {
@@ -137,9 +137,18 @@ EOF
 CLINIC_COUNT=$(execute_sql_plain "SELECT COUNT(*) FROM Clinic;")
 echo -e "${GREEN} Loaded $CLINIC_COUNT clinics${NC}"
 
-# 2. Create Auth Users via Python script
+# 2. Load Doctor data
 echo ""
-echo -e "${BLUE}[4/10]${NC} Creating Auth users..."
+echo -e "${BLUE}[4/10]${NC} Loading Doctor data..."
+docker exec -i -e PGPASSWORD="$DB_PASSWORD" "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" << 'EOF'
+\copy Doctor(doctor_id, name, clinic_id) FROM '/tmp/seed-data/doctor.csv' CSV HEADER
+EOF
+DOCTOR_COUNT=$(execute_sql_plain "SELECT COUNT(*) FROM Doctor;")
+echo -e "${GREEN} Loaded $DOCTOR_COUNT doctors${NC}"
+
+# 3. Create Auth Users via Python script
+echo ""
+echo -e "${BLUE}[5/10]${NC} Creating Auth users..."
 if command -v python3 &> /dev/null; then
     cd "$(dirname "$0")"  # Ensure we're in the db folder
     python3 create_auth_users.py
@@ -150,9 +159,9 @@ else
 fi
 echo -e "${GREEN} Auth users created${NC}"
 
-# 3. Update User_Profile data AND load appointments in ONE session
+# 4. Update User_Profile data AND load appointments in ONE session
 echo ""
-echo -e "${BLUE}[5,6/10]${NC} Updating User_Profile and loading related data..."
+echo -e "${BLUE}[6,7/10]${NC} Updating User_Profile and loading related data..."
 docker exec -i -e PGPASSWORD="$DB_PASSWORD" "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" << 'EOF'
 -- Copy CSV data into temporary table
 CREATE TEMP TABLE temp_user_profiles (
@@ -223,15 +232,6 @@ USER_COUNT=$(execute_sql "SELECT COUNT(*) FROM User_Profile;" -t | tr -d ' ')
 APPOINTMENT_COUNT=$(execute_sql "SELECT COUNT(*) FROM Appointment;" -t | tr -d ' ')
 echo -e "${GREEN} Updated user profiles (total: $USER_COUNT users)${NC}"
 echo -e "${GREEN} Loaded $APPOINTMENT_COUNT appointments${NC}"
-
-# 4. Load Doctor data
-echo ""
-echo -e "${BLUE}[7/10]${NC} Loading Doctor data..."
-docker exec -i -e PGPASSWORD="$DB_PASSWORD" "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" << 'EOF'
-\copy Doctor(doctor_id, name, clinic_id) FROM '/tmp/seed-data/doctor.csv' CSV HEADER
-EOF
-DOCTOR_COUNT=$(execute_sql_plain "SELECT COUNT(*) FROM Doctor;")
-echo -e "${GREEN} Loaded $DOCTOR_COUNT doctors${NC}"
 
 # 5. Load Schedule data
 echo ""
