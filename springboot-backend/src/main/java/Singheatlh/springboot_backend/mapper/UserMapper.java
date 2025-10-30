@@ -1,23 +1,68 @@
 package Singheatlh.springboot_backend.mapper;
 
+import Singheatlh.springboot_backend.dto.ClinicStaffDto;
 import Singheatlh.springboot_backend.dto.UserDto;
 import Singheatlh.springboot_backend.entity.User;
+import Singheatlh.springboot_backend.entity.enums.Role;
 import org.springframework.stereotype.Component;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Function;
 
 @Component
 public class UserMapper {
 
+    // Strategy Pattern: Map of role-specific mappers
+    private final Map<Role, Function<User, UserDto>> mapperStrategies;
+
+    public UserMapper() {
+        mapperStrategies = new HashMap<>();
+
+        // Register role-specific mapping strategies
+        mapperStrategies.put(Role.C, this::toClinicStaffDto);
+        mapperStrategies.put(Role.P, this::toBaseDto);
+        mapperStrategies.put(Role.S, this::toBaseDto);
+    }
+
+    /**
+     * Converts User entity to appropriate DTO based on role using Strategy Pattern.
+     * Returns ClinicStaffDto for staff users (includes clinicId),
+     * base UserDto for other roles.
+     */
     public UserDto toDto(User user) {
         if (user == null) return null;
 
-        UserDto dto = new UserDto();
-        dto.setUserId(user.getUserId());
-        dto.setName(user.getName());
-        dto.setEmail(user.getEmail());
-        dto.setRole(user.getRole());
-        dto.setTelephoneNumber(user.getTelephoneNumber());
-        // clinicId not included in base UserDto - only in ClinicStaffDto
-        return dto;
+        // Use strategy pattern - lookup and execute the appropriate mapper
+        Function<User, UserDto> mapper = mapperStrategies.getOrDefault(user.getRole(), this::toBaseDto);
+        return mapper.apply(user);
+    }
+
+    /**
+     * Maps to ClinicStaffDto for clinic staff users
+     */
+    private ClinicStaffDto toClinicStaffDto(User user) {
+        return ClinicStaffDto.builder()
+                .userId(user.getUserId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .role(user.getRole())
+                .telephoneNumber(user.getTelephoneNumber())
+                .clinicId(user.getClinicId())
+                .build();
+    }
+
+    /**
+     * Maps to base UserDto for patients and admins
+     */
+    private UserDto toBaseDto(User user) {
+        return UserDto.builder()
+                .userId(user.getUserId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .role(user.getRole())
+                .telephoneNumber(user.getTelephoneNumber())
+                .build();
     }
 
     public User toEntity(UserDto dto) {
@@ -29,7 +74,12 @@ public class UserMapper {
         user.setEmail(dto.getEmail());
         user.setRole(dto.getRole());
         user.setTelephoneNumber(dto.getTelephoneNumber());
-        // clinicId not included in base UserDto - only in ClinicStaffDto
+
+        // Handle clinicId if it's a ClinicStaffDto
+        if (dto instanceof ClinicStaffDto) {
+            user.setClinicId(((ClinicStaffDto) dto).getClinicId());
+        }
+
         return user;
     }
 }
