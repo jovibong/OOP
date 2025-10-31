@@ -106,7 +106,7 @@ const StaffAppointmentList = ({ appointments, loading, filterType = 'all' }) => 
                   <div className="mb-3">
                     <h5 className="card-title mb-2 fw-bold">
                       <i className="bi bi-person-fill me-2 text-primary"></i>
-                      {appointment?.patient?.name || 'Unknown Patient'}
+                      {appointment?.patient?.name || appointment?.patientName || 'Unknown Patient'}
                     </h5>
                     <small className="text-muted">
                       Patient ID: {appointment?.patientId?.substring(0, 8)}
