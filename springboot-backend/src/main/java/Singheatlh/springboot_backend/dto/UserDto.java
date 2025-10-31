@@ -18,4 +18,5 @@ public class UserDto {
     private String email;
     private Role role;  // Use enum for type safety (P, C, S)
     private String telephoneNumber;
+    // Note: clinicId is in ClinicStaffDto subclass for staff users
 }
