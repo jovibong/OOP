@@ -3,20 +3,65 @@ import apiClient from '../../api/apiClient';
 import SelectSlot from './SelectSlot';
 
 const RescheduleAppointmentModal = ({ show, onHide, appointment, onSuccess }) => {
+  const [step, setStep] = useState(1); // 1: Select Clinic (optional), 2: Select Doctor (optional), 3: Select Time
+  const [clinics, setClinics] = useState([]);
+  const [doctors, setDoctors] = useState([]);
+  const [selectedClinic, setSelectedClinic] = useState(null);
+  const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [toasts, setToasts] = useState([]);
+  const [allowChangeClinicDoctor, setAllowChangeClinicDoctor] = useState(false);
+
+  const TOAST_LIFETIME = 5000;
+
+  // Inject keyframes for slide-down animation
+  useEffect(() => {
+    const styleId = 'toast-animation-styles';
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.textContent = `
+        @keyframes slideDown {
+          from {
+            transform: translateY(-100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
+
+  const addToast = (type, text) => {
+    const id = Date.now() + Math.random();
+    const toast = { id, type, text };
+    setToasts((t) => [...t, toast]);
+    setTimeout(() => {
+      setToasts((t) => t.filter((x) => x.id !== id));
+    }, TOAST_LIFETIME);
+  };
 
   // Reset form when modal is opened/closed or appointment changes
   useEffect(() => {
     if (show && appointment) {
-      // Clear previous selections when modal opens
+      // Default: use current clinic and doctor
+      setSelectedClinic({ clinicId: appointment.clinicId, name: appointment.clinicName });
+      setSelectedDoctor({ doctorId: appointment.doctorId, name: appointment.doctorName });
       setSelectedDate('');
       setSelectedTime('');
       setError(null);
       setSuccess(false);
+      setToasts([]);
+      setAllowChangeClinicDoctor(false);
+      setStep(3); // Go directly to slot selection
     }
   }, [show, appointment]);
 

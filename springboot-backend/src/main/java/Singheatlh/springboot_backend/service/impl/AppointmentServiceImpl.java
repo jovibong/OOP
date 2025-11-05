@@ -44,10 +44,30 @@ public class AppointmentServiceImpl implements AppointmentService {
             throw new IllegalArgumentException("Appointment cannot be scheduled in the past");
         }
         
+        // Validate appointment is not for today (must be at least next day)
+        LocalDateTime today = LocalDateTime.now().toLocalDate().atStartOfDay();
+        LocalDateTime tomorrow = today.plusDays(1);
+        if (request.getStartDatetime().isBefore(tomorrow)) {
+            throw new IllegalArgumentException("Appointments must be booked at least one day in advance. Please select a date from tomorrow onwards.");
+        }
+        
         // Validate start time is before end time
         if (request.getStartDatetime().isAfter(request.getEndDatetime()) || 
             request.getStartDatetime().isEqual(request.getEndDatetime())) {
             throw new IllegalArgumentException("Start time must be before end time");
+        }
+        
+        // Check if patient already has an appointment on the same day
+        LocalDateTime startOfDay = request.getStartDatetime().toLocalDate().atStartOfDay();
+        LocalDateTime endOfDay = startOfDay.plusDays(1).minusSeconds(1);
+        List<Appointment> patientAppointmentsOnDay = appointmentRepository
+            .findByPatientIdAndStartDatetimeBetween(request.getPatientId(), startOfDay, endOfDay)
+            .stream()
+            .filter(apt -> apt.getStatus() == AppointmentStatus.Upcoming || apt.getStatus() == AppointmentStatus.Ongoing)
+            .collect(Collectors.toList());
+        
+        if (!patientAppointmentsOnDay.isEmpty()) {
+            throw new IllegalArgumentException("You already have an appointment scheduled on this day. Please choose a different date.");
         }
         
         // Check for conflicting appointments with the same doctor
@@ -56,7 +76,10 @@ public class AppointmentServiceImpl implements AppointmentService {
                 request.getDoctorId(),
                 request.getStartDatetime().minusMinutes(30),
                 request.getEndDatetime()
-            );
+            )
+            .stream()
+            .filter(apt -> apt.getStatus() == AppointmentStatus.Upcoming || apt.getStatus() == AppointmentStatus.Ongoing)
+            .collect(Collectors.toList());
         
         if (!conflictingAppointments.isEmpty()) {
             throw new IllegalArgumentException("Doctor is not available at the requested time");
@@ -140,6 +163,27 @@ public class AppointmentServiceImpl implements AppointmentService {
             throw new IllegalArgumentException("New appointment time cannot be in the past");
         }
         
+        // Validate appointment is not for today (must be at least next day)
+        LocalDateTime today = LocalDateTime.now().toLocalDate().atStartOfDay();
+        LocalDateTime tomorrow = today.plusDays(1);
+        if (newDateTime.isBefore(tomorrow)) {
+            throw new IllegalArgumentException("Appointments must be rescheduled to at least one day in advance. Please select a date from tomorrow onwards.");
+        }
+        
+        // Check if patient already has an appointment on the new date (excluding current appointment)
+        LocalDateTime startOfDay = newDateTime.toLocalDate().atStartOfDay();
+        LocalDateTime endOfDay = startOfDay.plusDays(1).minusSeconds(1);
+        List<Appointment> patientAppointmentsOnDay = appointmentRepository
+            .findByPatientIdAndStartDatetimeBetween(appointment.getPatientId(), startOfDay, endOfDay)
+            .stream()
+            .filter(apt -> !apt.getAppointmentId().equals(appointmentId)) // Exclude current appointment
+            .filter(apt -> apt.getStatus() == AppointmentStatus.Upcoming || apt.getStatus() == AppointmentStatus.Ongoing)
+            .collect(Collectors.toList());
+        
+        if (!patientAppointmentsOnDay.isEmpty()) {
+            throw new IllegalArgumentException("You already have an appointment scheduled on this day. Please choose a different date.");
+        }
+        
         // Calculate new end time (assume same duration)
         long durationMinutes = java.time.Duration.between(
             appointment.getStartDatetime(), 
@@ -153,7 +197,10 @@ public class AppointmentServiceImpl implements AppointmentService {
                 appointment.getDoctorId(),
                 newDateTime.minusMinutes(30),
                 newEndTime
-            );
+            )
+            .stream()
+            .filter(apt -> apt.getStatus() == AppointmentStatus.Upcoming || apt.getStatus() == AppointmentStatus.Ongoing)
+            .collect(Collectors.toList());
         
         // Remove current appointment from conflicts
         conflicts.removeIf(a -> a.getAppointmentId().equals(appointmentId));

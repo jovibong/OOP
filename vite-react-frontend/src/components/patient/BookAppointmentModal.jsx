@@ -1,4 +1,4 @@
-import { useState, useEffect, version } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import apiClient from "../../api/apiClient";
 import DateTimeSelector from "./DateTimeSelector";
@@ -17,14 +17,53 @@ const BookAppointmentModal = ({ show, onHide, onSuccess }) => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
+  const [toasts, setToasts] = useState([]);
+  const [clinicTypeFilter, setClinicTypeFilter] = useState('all'); // 'all', 'G', 'S'
 
   const useVersion = "v2"; // switch to v1 to use DateTimeSelector
+  const TOAST_LIFETIME = 5000; // ms
+
+  // Inject keyframes for slide-down animation
+  useEffect(() => {
+    const styleId = 'toast-animation-styles';
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.textContent = `
+        @keyframes slideDown {
+          from {
+            transform: translateY(-100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
+
+  const addToast = (type, text) => {
+    const id = Date.now() + Math.random();
+    const toast = { id, type, text };
+    setToasts((t) => [...t, toast]);
+    // auto-remove
+    setTimeout(() => {
+      setToasts((t) => t.filter((x) => x.id !== id));
+    }, TOAST_LIFETIME);
+  };
 
   // Fetch clinics only once when modal opens for the first time
   useEffect(() => {
     if (show && !hasFetched) {
       fetchClinics();
       setHasFetched(true);
+    }
+    // Clear toasts when modal opens
+    if (show) {
+      setToasts([]);
     }
   }, [show, hasFetched]);
 
@@ -124,11 +163,14 @@ const BookAppointmentModal = ({ show, onHide, onSuccess }) => {
         err.response?.data ||
         err.message ||
         "Failed to book appointment. Please try again.";
-      setError(
-        typeof errorMessage === "string"
+      const errorText = typeof errorMessage === "string"
           ? errorMessage
-          : JSON.stringify(errorMessage)
-      );
+          : JSON.stringify(errorMessage);
+      
+      // Clear any existing toasts and show error toast
+      setToasts([]);
+      addToast('error', errorText);
+      setError(errorText); // Keep for backward compatibility
     } finally {
       setLoading(false);
     }
@@ -143,6 +185,7 @@ const BookAppointmentModal = ({ show, onHide, onSuccess }) => {
     setError(null);
     setSuccess(false);
     setDoctors([]);
+    setToasts([]);
   };
 
   const handleClose = () => {
@@ -166,11 +209,56 @@ const BookAppointmentModal = ({ show, onHide, onSuccess }) => {
   };
   if (!show) return null;
 
+  const toastContainer = (
+    <div style={{ 
+      position: 'fixed', 
+      top: '2rem', 
+      left: '50%', 
+      transform: 'translateX(-50%)',
+      zIndex: 2000,
+      minWidth: '400px',
+      maxWidth: '600px'
+    }}>
+      {toasts.map((t) => (
+        <div
+          key={t.id}
+          className={`alert ${t.type === 'success' ? 'alert-success' : 'alert-danger'} shadow-lg`}
+          style={{ 
+            marginBottom: '0.5rem', 
+            opacity: 1, 
+            transition: 'all 0.3s ease-in-out',
+            fontSize: '1rem',
+            fontWeight: '500',
+            padding: '1rem 1.5rem',
+            borderRadius: '0.5rem',
+            border: 'none',
+            animation: 'slideDown 0.3s ease-out'
+          }}
+        >
+          <div className="d-flex align-items-center">
+            {t.type === 'success' ? (
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" className="me-3" viewBox="0 0 16 16">
+                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" className="me-3" viewBox="0 0 16 16">
+                <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8 4a.905.905 0 0 0-.9.995l.35 3.507a.552.552 0 0 0 1.1 0l.35-3.507A.905.905 0 0 0 8 4zm.002 6a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>
+              </svg>
+            )}
+            <span>{t.text}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
   return (
-    <div
-      className="modal show d-block"
-      style={{ backgroundColor: "rgba(0,0,0,0.4)", zIndex: 1050 }}
-    >
+    <>
+      {toastContainer}
+      <div
+        className="modal show d-block"
+        style={{ backgroundColor: "rgba(0,0,0,0.4)", zIndex: 1050 }}
+      >
       <div className="modal-dialog modal-dialog-centered modal-lg">
         <div className="modal-content border-0 shadow-lg">
           <div className="modal-header border-0 pb-0">
@@ -247,6 +335,33 @@ const BookAppointmentModal = ({ show, onHide, onSuccess }) => {
             {/* Step 1: Select Clinic */}
             {step === 1 && !success && (
               <div>
+                {/* Clinic Type Filter */}
+                <div className="mb-3">
+                  <div className="btn-group w-100" role="group">
+                    <button
+                      type="button"
+                      className={`btn ${clinicTypeFilter === 'all' ? 'btn-primary' : 'btn-outline-primary'}`}
+                      onClick={() => setClinicTypeFilter('all')}
+                    >
+                      All Clinics
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn ${clinicTypeFilter === 'G' ? 'btn-primary' : 'btn-outline-primary'}`}
+                      onClick={() => setClinicTypeFilter('G')}
+                    >
+                      General Practitioner
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn ${clinicTypeFilter === 'S' ? 'btn-primary' : 'btn-outline-primary'}`}
+                      onClick={() => setClinicTypeFilter('S')}
+                    >
+                      Specialist
+                    </button>
+                  </div>
+                </div>
+
                 <h6 className="mb-3">Select a Clinic</h6>
                 {loading ? (
                   <div className="text-center py-5">
@@ -256,7 +371,9 @@ const BookAppointmentModal = ({ show, onHide, onSuccess }) => {
                   </div>
                 ) : (
                   <div className="row g-3">
-                    {clinics.map((clinic) => (
+                    {clinics
+                      .filter(clinic => clinicTypeFilter === 'all' || clinic.type === clinicTypeFilter)
+                      .map((clinic) => (
                       <div key={clinic.clinicId} className="col-12">
                         <div
                           className="card border hover-shadow h-100"
@@ -272,7 +389,7 @@ const BookAppointmentModal = ({ show, onHide, onSuccess }) => {
                                 </p>
                               </div>
                               <span className="badge bg-light text-dark border">
-                                {clinic.type}
+                                {clinic.type === 'G' ? 'General Practitioner' : 'Specialist'}
                               </span>
                             </div>
                           </div>
@@ -334,7 +451,7 @@ const BookAppointmentModal = ({ show, onHide, onSuccess }) => {
 
             {/* Step 3: Select Date & Time */}
             {step === 3 && !success ? (
-              version === "v1" ? (
+              useVersion === "v1" ? (
                 <DateTimeSelector
                   selectedClinic={selectedClinic}
                   selectedDoctor={selectedDoctor}
@@ -402,6 +519,7 @@ const BookAppointmentModal = ({ show, onHide, onSuccess }) => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

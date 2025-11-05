@@ -59,6 +59,10 @@ public interface AppointmentRepository extends JpaRepository<Appointment, String
     List<Appointment> findByDoctorIdAndStartDatetimeBetween(
         String doctorId, LocalDateTime startDate, LocalDateTime endDate);
     
+    // Find appointments for a patient within a date range (useful for checking conflicts)
+    List<Appointment> findByPatientIdAndStartDatetimeBetween(
+        UUID patientId, LocalDateTime startDate, LocalDateTime endDate);
+    
     // Find upcoming appointments for a patient
     @Query("SELECT a FROM Appointment a " +
            "LEFT JOIN FETCH a.patient " +

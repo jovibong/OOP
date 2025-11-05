@@ -33,12 +33,13 @@ public class AppointmentController {
     }
     
     @PostMapping
-    public ResponseEntity<AppointmentDto> createAppointment(@RequestBody CreateAppointmentRequest request) {
+    public ResponseEntity<?> createAppointment(@RequestBody CreateAppointmentRequest request) {
         try {
             AppointmentDto createdAppointment = appointmentService.createAppointment(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdAppointment);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
