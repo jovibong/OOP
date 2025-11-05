@@ -1,6 +1,12 @@
 package Singheatlh.springboot_backend.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -31,6 +37,6 @@ public class Doctor {
     @JoinColumn(name = "clinic_id", insertable = false, updatable = false)
     private Clinic clinic;
 
-    @Column
-    private Integer appointmentDurationInMinutes = 15;
+    @Column(name = "appointment_duration_in_minutes", nullable = false)
+    private Integer appointmentDurationInMinutes;
 }

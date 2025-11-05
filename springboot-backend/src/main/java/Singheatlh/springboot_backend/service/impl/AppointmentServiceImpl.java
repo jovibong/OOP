@@ -1,7 +1,6 @@
 package Singheatlh.springboot_backend.service.impl;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -45,10 +44,30 @@ public class AppointmentServiceImpl implements AppointmentService {
             throw new IllegalArgumentException("Appointment cannot be scheduled in the past");
         }
         
+        // Validate appointment is not for today (must be at least next day)
+        LocalDateTime today = LocalDateTime.now().toLocalDate().atStartOfDay();
+        LocalDateTime tomorrow = today.plusDays(1);
+        if (request.getStartDatetime().isBefore(tomorrow)) {
+            throw new IllegalArgumentException("Appointments must be booked at least one day in advance. Please select a date from tomorrow onwards.");
+        }
+        
         // Validate start time is before end time
         if (request.getStartDatetime().isAfter(request.getEndDatetime()) || 
             request.getStartDatetime().isEqual(request.getEndDatetime())) {
             throw new IllegalArgumentException("Start time must be before end time");
+        }
+        
+        // Check if patient already has an appointment on the same day
+        LocalDateTime startOfDay = request.getStartDatetime().toLocalDate().atStartOfDay();
+        LocalDateTime endOfDay = startOfDay.plusDays(1).minusSeconds(1);
+        List<Appointment> patientAppointmentsOnDay = appointmentRepository
+            .findByPatientIdAndStartDatetimeBetween(request.getPatientId(), startOfDay, endOfDay)
+            .stream()
+            .filter(apt -> apt.getStatus() == AppointmentStatus.Upcoming || apt.getStatus() == AppointmentStatus.Ongoing)
+            .collect(Collectors.toList());
+        
+        if (!patientAppointmentsOnDay.isEmpty()) {
+            throw new IllegalArgumentException("You already have an appointment scheduled on this day. Please choose a different date.");
         }
         
         // Check for conflicting appointments with the same doctor
@@ -57,7 +76,10 @@ public class AppointmentServiceImpl implements AppointmentService {
                 request.getDoctorId(),
                 request.getStartDatetime().minusMinutes(30),
                 request.getEndDatetime()
-            );
+            )
+            .stream()
+            .filter(apt -> apt.getStatus() == AppointmentStatus.Upcoming || apt.getStatus() == AppointmentStatus.Ongoing)
+            .collect(Collectors.toList());
         
         if (!conflictingAppointments.isEmpty()) {
             throw new IllegalArgumentException("Doctor is not available at the requested time");
@@ -84,25 +106,8 @@ public class AppointmentServiceImpl implements AppointmentService {
     
     @Override
     @Transactional(readOnly = true)
-    public AppointmentDto getAppointmentById(String appointmentId) {
-        Appointment appointment = appointmentRepository.findById(appointmentId)
-            .orElseThrow(() -> new RuntimeException("Appointment not found with id: " + appointmentId));
-        return appointmentMapper.toDto(appointment);
-    }
-    
-    @Override
-    @Transactional(readOnly = true)
     public List<AppointmentDto> getAppointmentsByPatientId(UUID patientId) {
         List<Appointment> appointments = appointmentRepository.findByPatientId(patientId);
-        return appointments.stream()
-                .map(appointmentMapper::toDto)
-                .collect(Collectors.toList());
-    }
-    
-    @Override
-    @Transactional(readOnly = true)
-    public List<AppointmentDto> getAppointmentsByDoctorId(String doctorId) {
-        List<Appointment> appointments = appointmentRepository.findByDoctorId(doctorId);
         return appointments.stream()
                 .map(appointmentMapper::toDto)
                 .collect(Collectors.toList());
@@ -116,27 +121,6 @@ public class AppointmentServiceImpl implements AppointmentService {
         return appointments.stream()
                 .map(appointmentMapper::toDto)
                 .collect(Collectors.toList());
-    }
-    
-    @Override
-    @Transactional(readOnly = true)
-    public List<AppointmentDto> getUpcomingAppointmentsByDoctorId(String doctorId) {
-        List<Appointment> appointments = appointmentRepository
-            .findUpcomingAppointmentsByDoctorId(doctorId, LocalDateTime.now());
-        return appointments.stream()
-                .map(appointmentMapper::toDto)
-                .collect(Collectors.toList());
-    }
-    
-    @Override
-    public AppointmentDto updateAppointmentStatus(String appointmentId, AppointmentStatus status) {
-        Appointment appointment = appointmentRepository.findById(appointmentId)
-            .orElseThrow(() -> new RuntimeException("Appointment not found with id: " + appointmentId));
-        
-        appointment.setStatus(status);
-        Appointment updatedAppointment = appointmentRepository.save(appointment);
-        
-        return appointmentMapper.toDto(updatedAppointment);
     }
     
     @Override
@@ -156,7 +140,9 @@ public class AppointmentServiceImpl implements AppointmentService {
             throw new IllegalArgumentException("Cannot cancel appointments less than 24 hours in advance");
         }
         
-        updateAppointmentStatus(appointmentId, AppointmentStatus.Cancelled);
+        // Update appointment status to Cancelled
+        appointment.setStatus(AppointmentStatus.Cancelled);
+        appointmentRepository.save(appointment);
     }
     
     @Override
@@ -177,6 +163,27 @@ public class AppointmentServiceImpl implements AppointmentService {
             throw new IllegalArgumentException("New appointment time cannot be in the past");
         }
         
+        // Validate appointment is not for today (must be at least next day)
+        LocalDateTime today = LocalDateTime.now().toLocalDate().atStartOfDay();
+        LocalDateTime tomorrow = today.plusDays(1);
+        if (newDateTime.isBefore(tomorrow)) {
+            throw new IllegalArgumentException("Appointments must be rescheduled to at least one day in advance. Please select a date from tomorrow onwards.");
+        }
+        
+        // Check if patient already has an appointment on the new date (excluding current appointment)
+        LocalDateTime startOfDay = newDateTime.toLocalDate().atStartOfDay();
+        LocalDateTime endOfDay = startOfDay.plusDays(1).minusSeconds(1);
+        List<Appointment> patientAppointmentsOnDay = appointmentRepository
+            .findByPatientIdAndStartDatetimeBetween(appointment.getPatientId(), startOfDay, endOfDay)
+            .stream()
+            .filter(apt -> !apt.getAppointmentId().equals(appointmentId)) // Exclude current appointment
+            .filter(apt -> apt.getStatus() == AppointmentStatus.Upcoming || apt.getStatus() == AppointmentStatus.Ongoing)
+            .collect(Collectors.toList());
+        
+        if (!patientAppointmentsOnDay.isEmpty()) {
+            throw new IllegalArgumentException("You already have an appointment scheduled on this day. Please choose a different date.");
+        }
+        
         // Calculate new end time (assume same duration)
         long durationMinutes = java.time.Duration.between(
             appointment.getStartDatetime(), 
@@ -190,7 +197,10 @@ public class AppointmentServiceImpl implements AppointmentService {
                 appointment.getDoctorId(),
                 newDateTime.minusMinutes(30),
                 newEndTime
-            );
+            )
+            .stream()
+            .filter(apt -> apt.getStatus() == AppointmentStatus.Upcoming || apt.getStatus() == AppointmentStatus.Ongoing)
+            .collect(Collectors.toList());
         
         // Remove current appointment from conflicts
         conflicts.removeIf(a -> a.getAppointmentId().equals(appointmentId));
@@ -205,64 +215,6 @@ public class AppointmentServiceImpl implements AppointmentService {
         Appointment updatedAppointment = appointmentRepository.save(appointment);
         
         return appointmentMapper.toDto(updatedAppointment);
-    }
-    
-    @Override
-    @Transactional(readOnly = true)
-    public List<AppointmentDto> getAllAppointments() {
-        List<Appointment> appointments = appointmentRepository.findAll();
-        return appointments.stream()
-                .map(appointmentMapper::toDto)
-                .collect(Collectors.toList());
-    }
-    
-    @Override
-    @Transactional(readOnly = true)
-    public List<AppointmentDto> getAppointmentsByStatus(AppointmentStatus status) {
-        List<Appointment> appointments = appointmentRepository.findByStatus(status);
-        return appointments.stream()
-                .map(appointmentMapper::toDto)
-                .collect(Collectors.toList());
-    }
-    
-    @Override
-    @Transactional(readOnly = true)
-    public List<LocalDateTime> getAvailableSlots(String doctorId, LocalDateTime date) {
-        // Define clinic operating hours (9 AM to 5 PM)
-        LocalDateTime dayStart = date.toLocalDate().atTime(9, 0);
-        LocalDateTime dayEnd = date.toLocalDate().atTime(17, 0);
-        
-        // Get all appointments for this doctor on this date
-        List<Appointment> existingAppointments = appointmentRepository
-                .findByDoctorIdAndStartDatetimeBetween(
-                        doctorId, 
-                        dayStart.minusMinutes(1), 
-                        dayEnd.plusMinutes(1)
-                );
-        
-        List<LocalDateTime> availableSlots = new ArrayList<>();
-        LocalDateTime currentSlot = dayStart;
-        
-        // Generate 30-minute slots
-        while (currentSlot.isBefore(dayEnd)) {
-            final LocalDateTime slotTime = currentSlot;
-            LocalDateTime slotEnd = currentSlot.plusMinutes(30);
-            
-            // Check if this slot conflicts with any existing appointment
-            boolean isAvailable = existingAppointments.stream()
-                    .noneMatch(apt -> 
-                        (slotTime.isBefore(apt.getEndDatetime()) && 
-                         slotEnd.isAfter(apt.getStartDatetime()))
-                    );
-            
-            if (isAvailable) {
-                availableSlots.add(slotTime);
-            }
-            
-            currentSlot = currentSlot.plusMinutes(30);
-        }
-        
-        return availableSlots;
     }
 
     // ========== Clinic Staff Methods ==========
