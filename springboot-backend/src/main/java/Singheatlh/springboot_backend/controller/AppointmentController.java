@@ -284,6 +284,24 @@ public class AppointmentController {
     // ========== Clinic Staff Endpoints ==========
 
     /**
+     * Create a walk-in appointment (staff only)
+     * Bypasses future time validation to allow immediate appointment creation
+     * Staff can create appointments for patients who walk in without prior booking
+     */
+    @PostMapping("/walk-in")
+    public ResponseEntity<AppointmentDto> createWalkInAppointment(@RequestBody CreateAppointmentRequest request) {
+        try {
+            AppointmentDto createdAppointment = appointmentService.createWalkInAppointment(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdAppointment);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(null);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
      * Get all appointments for a specific clinic
      * Clinic staff can view all appointments for their clinic
      */

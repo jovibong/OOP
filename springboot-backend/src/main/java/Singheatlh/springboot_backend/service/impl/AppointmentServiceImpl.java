@@ -38,52 +38,17 @@ public class AppointmentServiceImpl implements AppointmentService {
     
     @Override
     public AppointmentDto createAppointment(CreateAppointmentRequest request) {
-        // Validate required fields
-        if (request.getPatientId() == null || request.getDoctorId() == null || 
-            request.getStartDatetime() == null || request.getEndDatetime() == null) {
-            throw new IllegalArgumentException("All required fields must be provided");
-        }
-        
-        // Validate appointment is in the future
-        if (request.getStartDatetime().isBefore(LocalDateTime.now())) {
-            throw new IllegalArgumentException("Appointment cannot be scheduled in the past");
-        }
-        
-        // Validate start time is before end time
-        if (request.getStartDatetime().isAfter(request.getEndDatetime()) || 
-            request.getStartDatetime().isEqual(request.getEndDatetime())) {
-            throw new IllegalArgumentException("Start time must be before end time");
-        }
-        
-        // Check for conflicting appointments with the same doctor
-        List<Appointment> conflictingAppointments = appointmentRepository
-            .findByDoctorIdAndStartDatetimeBetween(
-                request.getDoctorId(),
-                request.getStartDatetime().minusMinutes(30),
-                request.getEndDatetime()
-            );
-        
-        if (!conflictingAppointments.isEmpty()) {
-            throw new IllegalArgumentException("Doctor is not available at the requested time");
-        }
-        
-        // Generate appointment ID
-        String appointmentId = generateAppointmentId();
-        
-        Appointment appointment = appointmentMapper.toEntity(request);
-        appointment.setAppointmentId(appointmentId);
-        appointment.setStatus(AppointmentStatus.Upcoming);
-        
-        Appointment savedAppointment = appointmentRepository.save(appointment);
-        
-        return appointmentMapper.toDto(savedAppointment);
+        // Use Strategy Pattern to select and execute the appropriate creation strategy
+        return strategyFactory.getStrategy(request).createAppointment(request);
     }
-    
-    private String generateAppointmentId() {
-        // Get the count of existing appointments and increment
-        long count = appointmentRepository.count();
-        // Format as A000000001, A000000002, etc.
-        return String.format("A%09d", count + 1);
+
+    /**
+     * Convenience method for creating walk-in appointments.
+     * Sets the isWalkIn flag and delegates to createAppointment.
+     */
+    public AppointmentDto createWalkInAppointment(CreateAppointmentRequest request) {
+        request.setIsWalkIn(true);
+        return createAppointment(request);
     }
     
     @Override
