@@ -26,6 +26,14 @@ import Singheatlh.springboot_backend.service.QueueService;
 @Transactional
 public class QueueServiceImpl implements QueueService {
     
+    private static final int QUEUE_DECREMENT = 1;
+    private static final int FIRST_POSITION = 1;
+    private static final int SECOND_POSITION = 2;
+    private static final int FOURTH_POSITION = 4;
+    private static final int NOTIFICATION_POSITIONS_AHEAD = 3;
+    private static final int INITIAL_QUEUE_NUMBER = 1;
+    private static final int EMPTY_QUEUE_NUMBER = 0;
+    
     @Autowired
     private QueueTicketRepository queueTicketRepository;
     
@@ -46,17 +54,13 @@ public class QueueServiceImpl implements QueueService {
             
             LocalDateTime now = LocalDateTime.now();
 
-            // ENFORCEMENT OF CHECK FOR DATE OF APPOINTMENT
-            int test = 1;
-            if(test == 1){
-                LocalDateTime appointmentDate = appointment.getStartDatetime().toLocalDate().atStartOfDay();
-                LocalDateTime currentDate = now.toLocalDate().atStartOfDay();
-                
-                if (currentDate.isAfter(appointmentDate)) {
-                    throw new IllegalStateException("Check-in failed: Appointment date has passed. " +
-                        "Appointment was scheduled for " + appointment.getStartDatetime().toLocalDate() + 
-                        " but today is " + now.toLocalDate() + ". Please contact the clinic to reschedule.");
-                }
+            LocalDateTime appointmentDate = appointment.getStartDatetime().toLocalDate().atStartOfDay();
+            LocalDateTime currentDate = now.toLocalDate().atStartOfDay();
+            
+            if (currentDate.isAfter(appointmentDate)) {
+                throw new IllegalStateException("Check-in failed: Appointment date has passed. " +
+                    "Appointment was scheduled for " + appointment.getStartDatetime().toLocalDate() + 
+                    " but today is " + now.toLocalDate() + ". Please contact the clinic to reschedule.");
             }
             
             // Check appointment status
@@ -93,7 +97,7 @@ public class QueueServiceImpl implements QueueService {
             
             Integer maxQueueNumber = queueTicketRepository.findMaxQueueNumberByDoctorIdAndDate(
                 appointment.getDoctorId(), now);
-            Integer newQueueNumber = (maxQueueNumber == null) ? 1 : maxQueueNumber + 1;
+            Integer newQueueNumber = (maxQueueNumber == null) ? INITIAL_QUEUE_NUMBER : maxQueueNumber + QUEUE_DECREMENT;
 
             QueueTicket queueTicket = new QueueTicket(
                 appointmentId,
@@ -101,7 +105,7 @@ public class QueueServiceImpl implements QueueService {
                 newQueueNumber
             );
             
-            if (newQueueNumber == 1) {
+            if (newQueueNumber == FIRST_POSITION) {
                 queueTicket.setStatus(QueueStatus.CALLED);
             }
             
@@ -110,11 +114,10 @@ public class QueueServiceImpl implements QueueService {
             appointment.setStatus(AppointmentStatus.Ongoing);
             appointmentRepository.save(appointment);
             
-            // Reload the queue ticket with appointment relationship eagerly loaded
             queueTicket = queueTicketRepository.findByIdWithAppointment(queueTicket.getTicketId())
                 .orElseThrow(() -> new ResourceNotFoundExecption("Queue ticket not found after save"));
             
-            if (newQueueNumber == 1 || newQueueNumber == 2 || newQueueNumber == 4) {
+            if (newQueueNumber == FIRST_POSITION || newQueueNumber == SECOND_POSITION || newQueueNumber == FOURTH_POSITION) {
                 processQueueNotifications(appointment.getDoctorId());
             }
             
@@ -230,7 +233,7 @@ public class QueueServiceImpl implements QueueService {
             for (QueueTicket serving : currentlyServing) {
                 if (serving.getStatus() == QueueStatus.CALLED) {
                     serving.setStatus(QueueStatus.COMPLETED);
-                    serving.setQueueNumber(0); // if no one in q = 0
+                    serving.setQueueNumber(EMPTY_QUEUE_NUMBER);
                     queueTicketRepository.save(serving);
                     
                     Appointment appointment = appointmentRepository.findById(serving.getAppointmentId()).orElse(null);
@@ -241,12 +244,11 @@ public class QueueServiceImpl implements QueueService {
                 }
             }
             
-            // Get all tickets for this doctor today to decrement queue numbers
             List<QueueTicket> allTicketsToday = queueTicketRepository.findActiveQueueByDoctorIdAndDate(doctorId, today);
             
             for (QueueTicket ticket : allTicketsToday) {
                 if (ticket.getStatus() != QueueStatus.COMPLETED && ticket.getStatus() != QueueStatus.NO_SHOW) {
-                    ticket.setQueueNumber(ticket.getQueueNumber() - 1);
+                    ticket.setQueueNumber(ticket.getQueueNumber() - QUEUE_DECREMENT);
                     queueTicketRepository.save(ticket);
                 }
             }
@@ -325,9 +327,8 @@ public class QueueServiceImpl implements QueueService {
             String doctorId = queueTicket.getDoctorId();
             LocalDateTime referenceTime = queueTicket.getCheckInTime() != null ? queueTicket.getCheckInTime() : LocalDateTime.now();
             
-            // Mark as no-show and set queue number to 0
             queueTicket.setStatus(QueueStatus.NO_SHOW);
-            queueTicket.setQueueNumber(0);
+            queueTicket.setQueueNumber(EMPTY_QUEUE_NUMBER);
             queueTicket = queueTicketRepository.save(queueTicket);
             
             // Update appointment status
@@ -337,11 +338,10 @@ public class QueueServiceImpl implements QueueService {
                 appointmentRepository.save(appointment);
             }
             
-            // Decrement queue numbers for all remaining tickets (same as callNextQueue)
             List<QueueTicket> allTicketsToday = queueTicketRepository.findActiveQueueByDoctorIdAndDate(doctorId, referenceTime);
             for (QueueTicket ticket : allTicketsToday) {
                 if (ticket.getStatus() != QueueStatus.COMPLETED && ticket.getStatus() != QueueStatus.NO_SHOW) {
-                    ticket.setQueueNumber(ticket.getQueueNumber() - 1);
+                    ticket.setQueueNumber(ticket.getQueueNumber() - QUEUE_DECREMENT);
                     queueTicketRepository.save(ticket);
                 }
             }
@@ -481,7 +481,7 @@ public class QueueServiceImpl implements QueueService {
             }
         }
         
-        Integer notify3AwayNumber = currentServingNumber + 3;
+        Integer notify3AwayNumber = currentServingNumber + NOTIFICATION_POSITIONS_AHEAD;
         queueTicketRepository.findTicketToNotify3Away(doctorId, today, notify3AwayNumber)
             .ifPresent(ticket -> {
                 if (notificationService != null) {
@@ -489,7 +489,7 @@ public class QueueServiceImpl implements QueueService {
                 }
             });
 
-        Integer nextQueueNumber = currentServingNumber + 1;
+        Integer nextQueueNumber = currentServingNumber + QUEUE_DECREMENT;
         queueTicketRepository.findTicketToNotifyNext(doctorId, today, nextQueueNumber)
             .ifPresent(ticket -> {
                 // Notification service will handle sending alerts to patients
@@ -512,12 +512,10 @@ public class QueueServiceImpl implements QueueService {
         // by looking for any completed patients
         List<QueueTicket> allToday = queueTicketRepository.findActiveQueueByDoctorIdAndDate(doctorId, today);
         if (allToday.isEmpty()) {
-            return 0;
+            return EMPTY_QUEUE_NUMBER;
         }
         
-        // Queue exists but no one is actively being served
-        // Return 0 to indicate waiting for first patient to be called
-        return 0;
+        return EMPTY_QUEUE_NUMBER;
     }
     
     // Private helper method to get current serving queue number (for internal use)
@@ -529,8 +527,7 @@ public class QueueServiceImpl implements QueueService {
             return currentlyServing.get(0).getQueueNumber();
         }
         
-        // If no one is currently being served, return 0
-        return 0;
+        return EMPTY_QUEUE_NUMBER;
     }
 
     @Override
