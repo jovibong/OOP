@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import apiClient from '../../api/apiClient';
+import { QUEUE_CONFIG } from '../../config/queueConfig';
 
 const NowServingPage = () => {
   const { userProfile } = useAuth();
@@ -75,32 +76,33 @@ const NowServingPage = () => {
       oscillator1.connect(gainNode1);
       gainNode1.connect(ctx.destination);
       
-      oscillator1.frequency.value = 800; // Hz
+      oscillator1.frequency.value = QUEUE_CONFIG.SOUND_FREQUENCY_HIGH_HZ;
       oscillator1.type = 'sine';
       
+      const firstToneDuration = QUEUE_CONFIG.SOUND_DURATION_FIRST_TONE_MS / 1000;
       gainNode1.gain.setValueAtTime(0, now);
-      gainNode1.gain.linearRampToValueAtTime(0.3, now + 0.01);
-      gainNode1.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+      gainNode1.gain.linearRampToValueAtTime(QUEUE_CONFIG.SOUND_VOLUME, now + 0.01);
+      gainNode1.gain.exponentialRampToValueAtTime(0.01, now + firstToneDuration);
       
       oscillator1.start(now);
-      oscillator1.stop(now + 0.3);
+      oscillator1.stop(now + firstToneDuration);
 
-      // Second tone (lower pitch) - plays after first tone
       const oscillator2 = ctx.createOscillator();
       const gainNode2 = ctx.createGain();
       
       oscillator2.connect(gainNode2);
       gainNode2.connect(ctx.destination);
       
-      oscillator2.frequency.value = 600; // Hz
+      oscillator2.frequency.value = QUEUE_CONFIG.SOUND_FREQUENCY_LOW_HZ;
       oscillator2.type = 'sine';
       
-      gainNode2.gain.setValueAtTime(0, now + 0.3);
-      gainNode2.gain.linearRampToValueAtTime(0.3, now + 0.31);
-      gainNode2.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+      const secondToneDuration = QUEUE_CONFIG.SOUND_DURATION_SECOND_TONE_MS / 1000;
+      gainNode2.gain.setValueAtTime(0, now + firstToneDuration);
+      gainNode2.gain.linearRampToValueAtTime(QUEUE_CONFIG.SOUND_VOLUME, now + firstToneDuration + 0.01);
+      gainNode2.gain.exponentialRampToValueAtTime(0.01, now + secondToneDuration);
       
-      oscillator2.start(now + 0.3);
-      oscillator2.stop(now + 0.6);
+      oscillator2.start(now + firstToneDuration);
+      oscillator2.stop(now + secondToneDuration);
     } catch (err) {
       console.error('Error playing notification sound:', err);
     }
@@ -228,15 +230,13 @@ const NowServingPage = () => {
 
     const interval = setInterval(() => {
       pollServingData();
-    }, 5000); // Poll every 5 seconds
+    }, QUEUE_CONFIG.POLLING_INTERVAL_MS);
 
     return () => clearInterval(interval);
   }, [doctors, pollServingData]);
 
-  // Calculate responsive column classes based on number of doctors
-  // Max 3 columns, 2 rows (6 doctors visible)
   const getColumnClass = () => {
-    const numDoctors = Math.min(doctors.length, 6); // Show max 6 doctors
+    const numDoctors = Math.min(doctors.length, QUEUE_CONFIG.MAX_VISIBLE_DOCTORS);
     
     if (numDoctors === 1) {
       return 'col-12'; // 1 doctor: full width
@@ -291,7 +291,7 @@ const NowServingPage = () => {
               </div>
             ) : (
               <div className="row g-4 justify-content-center">
-                {doctors.slice(0, 6).map((doctor, index) => {
+                {doctors.slice(0, QUEUE_CONFIG.MAX_VISIBLE_DOCTORS).map((doctor, index) => {
                   const serving = servingData[doctor.doctorId];
                   const isServing = serving?.ticketId && serving?.ticketId !== 0;
                   const roomNumber = index + 1; // Generate room number starting from 1
@@ -299,7 +299,7 @@ const NowServingPage = () => {
                   return (
                     <div key={doctor.doctorId} className={getColumnClass()}>
                       <div className="card h-100 border shadow-sm">
-                        <div className="card-body p-5 text-center" style={{ minHeight: '400px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                        <div className="card-body p-5 text-center" style={{ minHeight: `${QUEUE_CONFIG.CARD_MIN_HEIGHT_PX}px`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                           <div>
                             {/* Room Number */}
                             <div className="mb-3">
@@ -342,7 +342,7 @@ const NowServingPage = () => {
                             ) : (
                               <div className="py-4">
                                 <h1 className="fw-bold text-success mb-0" style={{ fontSize: '8rem', letterSpacing: '0.1em' }}>
-                                  {String(serving.ticketId).padStart(4, '0')}
+                                  {String(serving.ticketId).padStart(QUEUE_CONFIG.TICKET_ID_PADDING_LENGTH, '0')}
                                 </h1>
                               </div>
                             )}
