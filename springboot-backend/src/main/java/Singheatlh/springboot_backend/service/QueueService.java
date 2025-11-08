@@ -32,8 +32,6 @@ public interface QueueService {
     
     QueueTicketDto fastTrackPatient(Integer ticketId, String reason);
     
-    void cancelQueueTicket(Integer ticketId);
-    
     List<QueueTicketDto> getQueueTicketsByPatientId(java.util.UUID patientId);
     
     void processQueueNotifications(String doctorId);
@@ -41,4 +39,6 @@ public interface QueueService {
     Integer getCurrentServingTicketId(String doctorId);
     
     Long getActiveQueueCount(String doctorId);
+    
+    List<QueueTicketDto> getAllQueueTickets();
 }

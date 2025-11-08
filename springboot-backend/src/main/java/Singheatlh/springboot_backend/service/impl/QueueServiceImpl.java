@@ -3,10 +3,13 @@ package Singheatlh.springboot_backend.service.impl;
 import java.util.Optional;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import Singheatlh.springboot_backend.dto.QueueStatusDto;
@@ -26,6 +29,17 @@ import Singheatlh.springboot_backend.service.QueueService;
 @Transactional
 public class QueueServiceImpl implements QueueService {
     
+    private static final int QUEUE_DECREMENT = 1;
+    private static final int FIRST_POSITION = 1;
+    private static final int SECOND_POSITION = 2;
+    private static final int FOURTH_POSITION = 4;
+    private static final int NOTIFICATION_POSITIONS_AHEAD = 3;
+    private static final int INITIAL_QUEUE_NUMBER = 1;
+    private static final int EMPTY_QUEUE_NUMBER = 0;
+    
+    // Per-doctor locks to prevent race conditions
+    private final Map<String, Object> doctorLocks = new ConcurrentHashMap<>();
+    
     @Autowired
     private QueueTicketRepository queueTicketRepository;
     
@@ -39,24 +53,41 @@ public class QueueServiceImpl implements QueueService {
     private NotificationService notificationService;
 
     @Override
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public QueueTicketDto checkIn(String appointmentId) {
         try {
             Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new ResourceNotFoundExecption("Appointment not found with id: " + appointmentId));
             
+            // Get or create lock for this doctor
+            String doctorId = appointment.getDoctorId();
+            Object lock = doctorLocks.computeIfAbsent(doctorId, k -> new Object());
+            
+            // Synchronize on doctor-specific lock to prevent concurrent check-ins
+            synchronized (lock) {
+                return performCheckIn(appointmentId, appointment);
+            }
+        } catch (ResourceNotFoundExecption e) {
+            throw e; 
+        } catch (IllegalStateException e) {
+            throw e; 
+        } catch (Exception e) {
+            throw new IllegalStateException("Check-in failed due to an unexpected error: " + e.getMessage() + 
+                ". Please contact operator for assistance.", e);
+        }
+    }
+    
+    private QueueTicketDto performCheckIn(String appointmentId, Appointment appointment) {
+        try {
             LocalDateTime now = LocalDateTime.now();
 
-            // ENFORCEMENT OF CHECK FOR DATE OF APPOINTMENT
-            int test = 1;
-            if(test == 1){
-                LocalDateTime appointmentDate = appointment.getStartDatetime().toLocalDate().atStartOfDay();
-                LocalDateTime currentDate = now.toLocalDate().atStartOfDay();
-                
-                if (currentDate.isAfter(appointmentDate)) {
-                    throw new IllegalStateException("Check-in failed: Appointment date has passed. " +
-                        "Appointment was scheduled for " + appointment.getStartDatetime().toLocalDate() + 
-                        " but today is " + now.toLocalDate() + ". Please contact the clinic to reschedule.");
-                }
+            LocalDateTime appointmentDate = appointment.getStartDatetime().toLocalDate().atStartOfDay();
+            LocalDateTime currentDate = now.toLocalDate().atStartOfDay();
+            
+            if (currentDate.isAfter(appointmentDate)) {
+                throw new IllegalStateException("Check-in failed: Appointment date has passed. " +
+                    "Appointment was scheduled for " + appointment.getStartDatetime().toLocalDate() + 
+                    " but today is " + now.toLocalDate() + ". Please reschedule for patient.");
             }
             
             // Check appointment status
@@ -67,15 +98,15 @@ public class QueueServiceImpl implements QueueService {
                 
                 case Ongoing:
                     throw new IllegalStateException("Check-in failed: This appointment is already ongoing. " +
-                        "You have already checked in and are currently being served or waiting in queue.");
+                        "Patient has already checked in and are currently being served or waiting in queue.");
                 
                 case Missed:
                     throw new IllegalStateException("Check-in failed: This appointment was marked as missed on " + 
-                        appointment.getStartDatetime().toLocalDate() + ". Please contact the clinic to reschedule.");
+                        appointment.getStartDatetime().toLocalDate() + ". Please reschedule for patient.");
                 
                 case Cancelled:
                     throw new IllegalStateException("Check-in failed: This appointment has been cancelled. " +
-                        "Please contact the clinic to reschedule if you still need medical attention.");
+                        "Please reschedule for the patient.");
                 
                 case Upcoming:
                     // Valid status, continue with time validation
@@ -87,13 +118,13 @@ public class QueueServiceImpl implements QueueService {
             
             // if already have ticket
             if (queueTicketRepository.findByAppointmentId(appointmentId).isPresent()) {
-                throw new IllegalStateException("Check-in failed: You have already checked in for this appointment. " +
-                    "Please check your queue status or contact clinic staff if you need assistance.");
+                throw new IllegalStateException("Check-in failed: Patient have already checked in for this appointment. " +
+                    "Please check patient queue status again or message the system operator if you need assistance.");
             }
             
             Integer maxQueueNumber = queueTicketRepository.findMaxQueueNumberByDoctorIdAndDate(
                 appointment.getDoctorId(), now);
-            Integer newQueueNumber = (maxQueueNumber == null) ? 1 : maxQueueNumber + 1;
+            Integer newQueueNumber = (maxQueueNumber == null) ? INITIAL_QUEUE_NUMBER : maxQueueNumber + QUEUE_DECREMENT;
 
             QueueTicket queueTicket = new QueueTicket(
                 appointmentId,
@@ -101,7 +132,7 @@ public class QueueServiceImpl implements QueueService {
                 newQueueNumber
             );
             
-            if (newQueueNumber == 1) {
+            if (newQueueNumber == FIRST_POSITION) {
                 queueTicket.setStatus(QueueStatus.CALLED);
             }
             
@@ -110,23 +141,16 @@ public class QueueServiceImpl implements QueueService {
             appointment.setStatus(AppointmentStatus.Ongoing);
             appointmentRepository.save(appointment);
             
-            // Reload the queue ticket with appointment relationship eagerly loaded
             queueTicket = queueTicketRepository.findByIdWithAppointment(queueTicket.getTicketId())
                 .orElseThrow(() -> new ResourceNotFoundExecption("Queue ticket not found after save"));
             
-            if (newQueueNumber == 1 || newQueueNumber == 2 || newQueueNumber == 4) {
+            if (newQueueNumber == FIRST_POSITION || newQueueNumber == SECOND_POSITION || newQueueNumber == FOURTH_POSITION) {
                 processQueueNotifications(appointment.getDoctorId());
             }
             
             return queueTicketMapper.toDto(queueTicket);
-            
-        } catch (ResourceNotFoundExecption e) {
-            throw e; 
-        } catch (IllegalStateException e) {
-            throw e; 
         } catch (Exception e) {
-            throw new IllegalStateException("Check-in failed due to an unexpected error: " + e.getMessage() + 
-                ". Please contact clinic staff for assistance.", e);
+            throw new IllegalStateException("Check-in failed: " + e.getMessage(), e);
         }
     }
 
@@ -210,13 +234,33 @@ public class QueueServiceImpl implements QueueService {
     }
 
     @Override
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public QueueTicketDto callNextQueue(String doctorId) {
         try {
-            LocalDateTime today = LocalDateTime.now();
-            
             if (doctorId == null || doctorId.trim().isEmpty()) {
                 throw new IllegalArgumentException("Call next failed: Doctor ID cannot be null or empty.");
             }
+            
+            // Get or create lock for this doctor
+            Object lock = doctorLocks.computeIfAbsent(doctorId, k -> new Object());
+            
+            // Synchronize on doctor-specific lock to prevent concurrent call-next operations
+            synchronized (lock) {
+                return performCallNext(doctorId);
+            }
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalStateException("Call next failed due to an unexpected error: " + e.getMessage() + 
+                ". Please contact system administrator for assistance.", e);
+        }
+    }
+    
+    private QueueTicketDto performCallNext(String doctorId) {
+        try {
+            LocalDateTime today = LocalDateTime.now();
             
             List<QueueTicket> activeQueue = queueTicketRepository.findActiveQueueByDoctorIdAndDate(doctorId, today);
             
@@ -230,7 +274,7 @@ public class QueueServiceImpl implements QueueService {
             for (QueueTicket serving : currentlyServing) {
                 if (serving.getStatus() == QueueStatus.CALLED) {
                     serving.setStatus(QueueStatus.COMPLETED);
-                    serving.setQueueNumber(0); // if no one in q = 0
+                    serving.setQueueNumber(EMPTY_QUEUE_NUMBER);
                     queueTicketRepository.save(serving);
                     
                     Appointment appointment = appointmentRepository.findById(serving.getAppointmentId()).orElse(null);
@@ -241,12 +285,11 @@ public class QueueServiceImpl implements QueueService {
                 }
             }
             
-            // Get all tickets for this doctor today to decrement queue numbers
             List<QueueTicket> allTicketsToday = queueTicketRepository.findActiveQueueByDoctorIdAndDate(doctorId, today);
             
             for (QueueTicket ticket : allTicketsToday) {
                 if (ticket.getStatus() != QueueStatus.COMPLETED && ticket.getStatus() != QueueStatus.NO_SHOW) {
-                    ticket.setQueueNumber(ticket.getQueueNumber() - 1);
+                    ticket.setQueueNumber(ticket.getQueueNumber() - QUEUE_DECREMENT);
                     queueTicketRepository.save(ticket);
                 }
             }
@@ -274,14 +317,8 @@ public class QueueServiceImpl implements QueueService {
             
             // No more patients to call
             return null;
-            
-        } catch (IllegalArgumentException e) {
-            throw e;
-        } catch (IllegalStateException e) {
-            throw e;
         } catch (Exception e) {
-            throw new IllegalStateException("Call next failed due to an unexpected error: " + e.getMessage() + 
-                ". Please contact system administrator for assistance.", e);
+            throw new IllegalStateException("Call next failed: " + e.getMessage(), e);
         }
     }
 
@@ -317,8 +354,71 @@ public class QueueServiceImpl implements QueueService {
     }
 
     @Override
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public QueueTicketDto markAsNoShow(Integer ticketId) {
-        return updateQueueStatus(ticketId, QueueStatus.NO_SHOW);
+        try {
+            QueueTicket queueTicket = queueTicketRepository.findById(ticketId)
+                .orElseThrow(() -> new ResourceNotFoundExecption("Queue ticket not found with id: " + ticketId));
+            
+            String doctorId = queueTicket.getDoctorId();
+            
+            // Get or create lock for this doctor
+            Object lock = doctorLocks.computeIfAbsent(doctorId, k -> new Object());
+            
+            // Synchronize on doctor-specific lock to prevent race conditions
+            synchronized (lock) {
+                return performMarkAsNoShow(ticketId, queueTicket, doctorId);
+            }
+        } catch (ResourceNotFoundExecption e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalStateException("Mark as no-show failed due to an unexpected error: " + e.getMessage(), e);
+        }
+    }
+    
+    private QueueTicketDto performMarkAsNoShow(Integer ticketId, QueueTicket queueTicket, String doctorId) {
+        try {
+            LocalDateTime referenceTime = queueTicket.getCheckInTime() != null ? queueTicket.getCheckInTime() : LocalDateTime.now();
+            
+            queueTicket.setStatus(QueueStatus.NO_SHOW);
+            queueTicket.setQueueNumber(EMPTY_QUEUE_NUMBER);
+            queueTicket = queueTicketRepository.save(queueTicket);
+            
+            // Update appointment status
+            Appointment appointment = appointmentRepository.findById(queueTicket.getAppointmentId()).orElse(null);
+            if (appointment != null) {
+                appointment.setStatus(AppointmentStatus.Missed);
+                appointmentRepository.save(appointment);
+            }
+            
+            List<QueueTicket> allTicketsToday = queueTicketRepository.findActiveQueueByDoctorIdAndDate(doctorId, referenceTime);
+            for (QueueTicket ticket : allTicketsToday) {
+                if (ticket.getStatus() != QueueStatus.COMPLETED && ticket.getStatus() != QueueStatus.NO_SHOW) {
+                    ticket.setQueueNumber(ticket.getQueueNumber() - QUEUE_DECREMENT);
+                    queueTicketRepository.save(ticket);
+                }
+            }
+            
+            // Refresh the active queue list after updates
+            List<QueueTicket> activeQueue = queueTicketRepository.findActiveQueueByDoctorIdAndDate(doctorId, referenceTime);
+            
+            // Find the next patient to call (either CHECKED_IN or FAST_TRACKED status)
+            Optional<QueueTicket> nextTicketOptional = activeQueue.stream()
+                .filter(ticket -> ticket.getStatus() == QueueStatus.CHECKED_IN || ticket.getStatus() == QueueStatus.FAST_TRACKED)
+                .findFirst();
+            
+            if (nextTicketOptional.isPresent()) {
+                QueueTicket nextTicket = nextTicketOptional.get();
+                nextTicket.setStatus(QueueStatus.CALLED);
+                queueTicketRepository.save(nextTicket);
+            }
+            
+            processQueueNotifications(doctorId);
+            
+            return queueTicketMapper.toDto(queueTicket);
+        } catch (Exception e) {
+            throw new IllegalStateException("Mark as no-show failed: " + e.getMessage(), e);
+        }
     }
 
     @Override
@@ -327,6 +427,7 @@ public class QueueServiceImpl implements QueueService {
     }
 
     @Override
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public QueueTicketDto fastTrackPatient(Integer ticketId, String reason) {
         QueueTicket queueTicket = queueTicketRepository.findById(ticketId)
             .orElseThrow(() -> new ResourceNotFoundExecption("Queue ticket not found with id: " + ticketId));
@@ -337,6 +438,17 @@ public class QueueServiceImpl implements QueueService {
         }
         
         String doctorId = queueTicket.getDoctorId();
+        
+        // Get or create lock for this doctor
+        Object lock = doctorLocks.computeIfAbsent(doctorId, k -> new Object());
+        
+        // Synchronize on doctor-specific lock to prevent race conditions
+        synchronized (lock) {
+            return performFastTrack(ticketId, reason, queueTicket, doctorId);
+        }
+    }
+    
+    private QueueTicketDto performFastTrack(Integer ticketId, String reason, QueueTicket queueTicket, String doctorId) {
         LocalDateTime today = LocalDateTime.now();
 
         List<QueueTicket> activeQueue = queueTicketRepository.findActiveQueueByDoctorIdAndDate(doctorId, today);
@@ -407,25 +519,6 @@ public class QueueServiceImpl implements QueueService {
     }
 
     @Override
-    public void cancelQueueTicket(Integer ticketId) {
-        QueueTicket queueTicket = queueTicketRepository.findById(ticketId)
-            .orElseThrow(() -> new ResourceNotFoundExecption("Queue ticket not found with id: " + ticketId));
-        
-        // Set status to NO_SHOW to indicate patient is no longer in queue
-        queueTicket.setStatus(QueueStatus.NO_SHOW);
-        queueTicketRepository.save(queueTicket);
-        
-        // Update appointment status
-        Appointment appointment = appointmentRepository.findById(queueTicket.getAppointmentId()).orElse(null);
-        if (appointment != null) {
-            appointment.setStatus(AppointmentStatus.Cancelled);
-            appointmentRepository.save(appointment);
-        }
-
-        processQueueNotifications(queueTicket.getDoctorId());
-    }
-
-    @Override
     public List<QueueTicketDto> getQueueTicketsByPatientId(java.util.UUID patientId) {
         List<QueueTicket> queueTickets = queueTicketRepository.findByPatientId(patientId);
         return queueTickets.stream()
@@ -450,7 +543,7 @@ public class QueueServiceImpl implements QueueService {
             }
         }
         
-        Integer notify3AwayNumber = currentServingNumber + 3;
+        Integer notify3AwayNumber = currentServingNumber + NOTIFICATION_POSITIONS_AHEAD;
         queueTicketRepository.findTicketToNotify3Away(doctorId, today, notify3AwayNumber)
             .ifPresent(ticket -> {
                 if (notificationService != null) {
@@ -458,7 +551,7 @@ public class QueueServiceImpl implements QueueService {
                 }
             });
 
-        Integer nextQueueNumber = currentServingNumber + 1;
+        Integer nextQueueNumber = currentServingNumber + QUEUE_DECREMENT;
         queueTicketRepository.findTicketToNotifyNext(doctorId, today, nextQueueNumber)
             .ifPresent(ticket -> {
                 // Notification service will handle sending alerts to patients
@@ -481,12 +574,10 @@ public class QueueServiceImpl implements QueueService {
         // by looking for any completed patients
         List<QueueTicket> allToday = queueTicketRepository.findActiveQueueByDoctorIdAndDate(doctorId, today);
         if (allToday.isEmpty()) {
-            return 0;
+            return EMPTY_QUEUE_NUMBER;
         }
         
-        // Queue exists but no one is actively being served
-        // Return 0 to indicate waiting for first patient to be called
-        return 0;
+        return EMPTY_QUEUE_NUMBER;
     }
     
     // Private helper method to get current serving queue number (for internal use)
@@ -498,14 +589,21 @@ public class QueueServiceImpl implements QueueService {
             return currentlyServing.get(0).getQueueNumber();
         }
         
-        // If no one is currently being served, return 0
-        return 0;
+        return EMPTY_QUEUE_NUMBER;
     }
 
     @Override
     public Long getActiveQueueCount(String doctorId) {
         LocalDateTime today = LocalDateTime.now();
         return queueTicketRepository.countActiveQueueByDoctorIdAndDate(doctorId, today);
+    }
+    
+    @Override
+    public List<QueueTicketDto> getAllQueueTickets() {
+        List<QueueTicket> allTickets = queueTicketRepository.findAll();
+        return allTickets.stream()
+            .map(queueTicketMapper::toDto)
+            .collect(Collectors.toList());
     }
     
     // to work in conjuction with notification service, message is returned already

@@ -8,6 +8,7 @@ const StaffAppointmentList = ({ appointments, loading, filterType = 'all' }) => 
   const [queueByAppointment, setQueueByAppointment] = useState({}); // { [appointmentId]: QueueTicketDto-like }
   const [fastTrackLoading, setFastTrackLoading] = useState({}); // { [appointmentId]: boolean }
   const [completedLoading, setCompletedLoading] = useState({}); // { [appointmentId]: boolean }
+  const [noShowLoading, setNoShowLoading] = useState({}); // { [appointmentId]: boolean }
 
   const getStatusBadge = (status) => {
     const badges = {
@@ -92,6 +93,11 @@ const StaffAppointmentList = ({ appointments, loading, filterType = 'all' }) => 
   }, [appointments, queueByAppointment]);
 
   const handleCheckIn = async (appointmentId) => {
+    // Prevent double-click: check if already loading
+    if (checkInLoading[appointmentId]) {
+      return;
+    }
+
     try {
       setCheckInLoading((prev) => ({ ...prev, [appointmentId]: true }));
       setCheckInResult((prev) => ({ ...prev, [appointmentId]: undefined }));
@@ -122,12 +128,16 @@ const StaffAppointmentList = ({ appointments, loading, filterType = 'all' }) => 
           message: backendMsg,
         },
       }));
-    } finally {
       setCheckInLoading((prev) => ({ ...prev, [appointmentId]: false }));
     }
   };
 
   const handleFastTrack = async (appointmentId) => {
+    // Prevent double-click: check if already loading
+    if (fastTrackLoading[appointmentId] || checkInLoading[appointmentId]) {
+      return;
+    }
+
     // Prompt for reason first; if none, exit without check-in
     const reason = window.prompt('Enter fast-track reason (e.g., Emergency/Priority):', 'Emergency/Priority');
     if (reason === null) return; // user cancelled
@@ -201,6 +211,11 @@ const StaffAppointmentList = ({ appointments, loading, filterType = 'all' }) => 
   };
 
   const handleComplete = async (appointmentId, doctorId) => {
+    // Prevent double-click: check if already loading
+    if (completedLoading[appointmentId]) {
+      return;
+    }
+
     if (!doctorId) {
       setCheckInResult((prev) => ({
         ...prev,
@@ -224,8 +239,40 @@ const StaffAppointmentList = ({ appointments, loading, filterType = 'all' }) => 
           message: backendMsg,
         },
       }));
-    } finally {
       setCompletedLoading((prev) => ({ ...prev, [appointmentId]: false }));
+    }
+  };
+
+  const handleNoShow = async (appointmentId) => {
+    // Prevent double-click: check if already loading
+    if (noShowLoading[appointmentId]) {
+      return;
+    }
+
+    const ticket = queueByAppointment[appointmentId];
+    if (!ticket || !ticket.ticketId) {
+      return;
+    }
+
+    const confirmed = window.confirm('Mark this patient as no-show? This will update the queue positions.');
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setNoShowLoading((prev) => ({ ...prev, [appointmentId]: true }));
+      await apiClient.put(`/api/queue/ticket/${ticket.ticketId}/no-show`);
+      window.location.reload();
+    } catch (err) {
+      const backendMsg = err?.response?.data?.message || 'Marking no-show failed. Please try again.';
+      setCheckInResult((prev) => ({
+        ...prev,
+        [appointmentId]: {
+          success: false,
+          message: backendMsg,
+        },
+      }));
+      setNoShowLoading((prev) => ({ ...prev, [appointmentId]: false }));
     }
   };
 
@@ -325,7 +372,7 @@ const StaffAppointmentList = ({ appointments, loading, filterType = 'all' }) => 
                     <div className="d-flex align-items-center mb-2 text-muted">
                       <i className="bi bi-person-badge me-2"></i>
                       <span className="small">
-                        Dr. {appointment?.doctor?.name || appointment?.doctorName || 'Unknown'}
+                        {appointment?.doctor?.name || appointment?.doctorName || 'Unknown'}
                       </span>
                     </div>
                   </div>
@@ -419,6 +466,32 @@ const StaffAppointmentList = ({ appointments, loading, filterType = 'all' }) => 
                               <>
                                 <i className="bi bi-lightning-charge-fill me-1"></i>
                                 Fast-track
+                              </>
+                            )}
+                          </button>
+                        );
+                      })()}
+
+                      {(() => {
+                        const statusUpper = (appointment.status || '').toUpperCase();
+                        const qNum = queueByAppointment[appointment.appointmentId]?.queueNumber;
+                        const isOngoingAndFirst = statusUpper === 'ONGOING' && qNum === 1;
+                        if (!isOngoingAndFirst) return null;
+                        return (
+                          <button
+                            className="btn btn-outline-danger btn-sm"
+                            onClick={() => handleNoShow(appointment.appointmentId)}
+                            disabled={!!noShowLoading[appointment.appointmentId]}
+                          >
+                            {noShowLoading[appointment.appointmentId] ? (
+                              <>
+                                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                Marking...
+                              </>
+                            ) : (
+                              <>
+                                <i className="bi bi-x-octagon me-1"></i>
+                                Mark as No-Show
                               </>
                             )}
                           </button>
