@@ -10,7 +10,6 @@ import Singheatlh.springboot_backend.entity.enums.AppointmentStatus;
 
 public interface AppointmentService {
     
-    
     AppointmentDto createAppointment(CreateAppointmentRequest request);
 
     /**
@@ -26,32 +25,11 @@ public interface AppointmentService {
     
     List<AppointmentDto> getAppointmentsByPatientId(UUID patientId);
     
-    
-    List<AppointmentDto> getAppointmentsByDoctorId(String doctorId);
-    
-    
     List<AppointmentDto> getUpcomingAppointmentsByPatientId(UUID patientId);
-    
-    
-    List<AppointmentDto> getUpcomingAppointmentsByDoctorId(String doctorId);
-    
-    
-    AppointmentDto updateAppointmentStatus(String appointmentId, AppointmentStatus status);
-    
     
     void cancelAppointment(String appointmentId);
     
-    
     AppointmentDto rescheduleAppointment(String appointmentId, LocalDateTime newDateTime);
-    
-    
-    List<AppointmentDto> getAllAppointments();
-    
-    
-    List<AppointmentDto> getAppointmentsByStatus(AppointmentStatus status);
-
-
-    List<LocalDateTime> getAvailableSlots(String doctorId, LocalDateTime date);
 
     // ========== Clinic Staff Methods ==========
 
