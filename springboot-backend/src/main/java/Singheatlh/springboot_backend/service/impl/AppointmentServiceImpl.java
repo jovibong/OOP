@@ -17,6 +17,7 @@ import Singheatlh.springboot_backend.mapper.AppointmentMapper;
 import Singheatlh.springboot_backend.repository.AppointmentRepository;
 import Singheatlh.springboot_backend.service.AppointmentService;
 import Singheatlh.springboot_backend.strategy.AppointmentStrategyFactory;
+import Singheatlh.springboot_backend.util.StreamMappingHelper;
 
 @Service
 @Transactional
@@ -63,9 +64,7 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Transactional(readOnly = true)
     public List<AppointmentDto> getAppointmentsByPatientId(UUID patientId) {
         List<Appointment> appointments = appointmentRepository.findByPatientId(patientId);
-        return appointments.stream()
-                .map(appointmentMapper::toDto)
-                .collect(Collectors.toList());
+        return StreamMappingHelper.mapToList(appointments, appointmentMapper::toDto);
     }
     
     @Override
@@ -73,9 +72,7 @@ public class AppointmentServiceImpl implements AppointmentService {
     public List<AppointmentDto> getUpcomingAppointmentsByPatientId(UUID patientId) {
         List<Appointment> appointments = appointmentRepository
             .findUpcomingAppointmentsByPatientId(patientId, LocalDateTime.now());
-        return appointments.stream()
-                .map(appointmentMapper::toDto)
-                .collect(Collectors.toList());
+        return StreamMappingHelper.mapToList(appointments, appointmentMapper::toDto);
     }
     
     @Override
@@ -178,18 +175,14 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Transactional(readOnly = true)
     public List<AppointmentDto> getAppointmentsByClinicId(Integer clinicId) {
         List<Appointment> appointments = appointmentRepository.findByClinicId(clinicId);
-        return appointments.stream()
-                .map(appointmentMapper::toDto)
-                .collect(Collectors.toList());
+        return StreamMappingHelper.mapToList(appointments, appointmentMapper::toDto);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<AppointmentDto> getAppointmentsByClinicIdAndStatus(Integer clinicId, AppointmentStatus status) {
         List<Appointment> appointments = appointmentRepository.findByClinicIdAndStatus(clinicId, status);
-        return appointments.stream()
-                .map(appointmentMapper::toDto)
-                .collect(Collectors.toList());
+        return StreamMappingHelper.mapToList(appointments, appointmentMapper::toDto);
     }
 
     @Override
@@ -198,9 +191,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         List<Appointment> appointments = appointmentRepository.findTodayAppointmentsByClinicId(
             clinicId, LocalDateTime.now()
         );
-        return appointments.stream()
-                .map(appointmentMapper::toDto)
-                .collect(Collectors.toList());
+        return StreamMappingHelper.mapToList(appointments, appointmentMapper::toDto);
     }
 
     @Override
@@ -210,9 +201,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         List<Appointment> appointments = appointmentRepository.findByClinicIdAndDateRange(
             clinicId, startDate, endDate
         );
-        return appointments.stream()
-                .map(appointmentMapper::toDto)
-                .collect(Collectors.toList());
+        return StreamMappingHelper.mapToList(appointments, appointmentMapper::toDto);
     }
 
     @Override
@@ -221,8 +210,6 @@ public class AppointmentServiceImpl implements AppointmentService {
         List<Appointment> appointments = appointmentRepository.findUpcomingAppointmentsByClinicId(
             clinicId, LocalDateTime.now()
         );
-        return appointments.stream()
-                .map(appointmentMapper::toDto)
-                .collect(Collectors.toList());
+        return StreamMappingHelper.mapToList(appointments, appointmentMapper::toDto);
     }
 }
