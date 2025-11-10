@@ -1,7 +1,5 @@
 package Singheatlh.springboot_backend.service.impl;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -29,9 +27,6 @@ import Singheatlh.springboot_backend.service.NotificationService;
 @Service
 public class NotificationServiceImpl implements NotificationService {
     
-    private static final Logger logger = LoggerFactory.getLogger(NotificationServiceImpl.class);
-    
-    
     @Autowired
     private RestTemplate restTemplate;
     
@@ -49,13 +44,17 @@ public class NotificationServiceImpl implements NotificationService {
     
     @Override
     public void sendQueueNotification3Away(QueueTicket queueTicket) {
+        String doctorName = getDoctorName(queueTicket);
         String subject = "Queue Update - 3 Patients Away";
         String message = String.format(
+            "Ticket Number: %s\n\n" +
             "Dear Patient,\n\n" +
-            "Queue #%d: You are currently 3 patients away from being called. " +
+            "Doctor: %s\n\n" +
+            "You are currently 3 patients away from being called. " +
             "Please proceed closer to the consultation room.\n\n" +
             "Thank you for your patience.",
-            queueTicket.getQueueNumber()
+            queueTicket.getTicketNumberForDay(),
+            doctorName
         );
         
         // Send Email via SMU Lab Notification Service
@@ -64,13 +63,17 @@ public class NotificationServiceImpl implements NotificationService {
     
     @Override
     public void sendQueueNotificationNext(QueueTicket queueTicket) {
+        String doctorName = getDoctorName(queueTicket);
         String subject = "Queue Update - You're Next!";
         String message = String.format(
+            "Ticket Number: %s\n\n" +
             "Dear Patient,\n\n" +
-            "Queue Number #%d: You are next in line. " +
+            "Doctor: %s\n\n" +
+            "You are next in line. " +
             "Please be ready and stay close to the consultation room.\n\n" +
             "Thank you for your patience.",
-            queueTicket.getQueueNumber()
+            queueTicket.getTicketNumberForDay(),
+            doctorName
         );
         
         // Send Email via SMU Lab Notification Service
@@ -79,13 +82,17 @@ public class NotificationServiceImpl implements NotificationService {
     
     @Override
     public void sendQueueCalledNotification(QueueTicket queueTicket) {
+        String doctorName = getDoctorName(queueTicket);
         String subject = "Queue Called - Your Turn Now!";
         String message = String.format(
+            "Ticket Number: %s\n\n" +
             "Dear Patient,\n\n" +
-            "Queue #%d: It's your turn now. " +
+            "Doctor: %s\n\n" +
+            "It's your turn now. " +
             "Please proceed to the consultation room immediately.\n\n" +
             "Thank you for your cooperation.",
-            queueTicket.getQueueNumber()
+            queueTicket.getTicketNumberForDay(),
+            doctorName
         );
         
         // Send Email via SMU Lab Notification Service
@@ -94,21 +101,32 @@ public class NotificationServiceImpl implements NotificationService {
     
     @Override
     public void sendFastTrackNotification(QueueTicket queueTicket) {
+        String doctorName = getDoctorName(queueTicket);
         String subject = "Queue Update - You've Been Fast-Tracked!";
         String message = String.format(
+            "Ticket Number: %s\n\n" +
             "Dear Patient,\n\n" +
-            "Due to your situation! You have been fast-tracked in the queue. " +
-            "Your new queue number is #%d.\n\n" +
+            "Doctor: %s\n\n" +
+            "Due to your situation! You have been fast-tracked in the queue.\n\n" +
             "Reason: %s\n\n" +
             "Please be ready as you will be called soon. " +
             "Stay close to the consultation room.\n\n" +
             "Thank you for your patience.",
-            queueTicket.getQueueNumber(),
+            queueTicket.getTicketNumberForDay(),
+            doctorName,
             queueTicket.getFastTrackReason() != null ? queueTicket.getFastTrackReason() : "Priority/Emergency"
         );
         
         // Send Email via SMU Lab Notification Service
         sendEmail(queueTicket, subject, message);
+    }
+
+    private String getDoctorName(QueueTicket queueTicket) {
+        if (queueTicket.getAppointment() != null && queueTicket.getAppointment().getDoctor() != null) {
+            String name = queueTicket.getAppointment().getDoctor().getName();
+            return name != null && !name.trim().isEmpty() ? name : "Unknown Doctor";
+        }
+        return "Unknown Doctor";
     }
     
     /**
@@ -125,36 +143,24 @@ public class NotificationServiceImpl implements NotificationService {
             
             // If helper method returns null, fetch appointment directly
             if (patientId == null) {
-                logger.warn("⚠️ QueueTicket.getPatientId() returned null, fetching appointment directly");
                 Appointment appointment = appointmentRepository.findById(queueTicket.getAppointmentId()).orElse(null);
                 if (appointment != null) {
                     patientId = appointment.getPatientId();
-                    logger.info("✅ Retrieved patientId from appointment: {}", patientId);
-                } else {
-                    logger.error("❌ Appointment {} not found!", queueTicket.getAppointmentId());
                 }
             }
             
             // Get patient email from database
             String email = null;
-            String patientName = "Patient";
             
             if (patientId != null) {
                 Patient patient = patientRepository.findById(patientId).orElse(null);
                 if (patient != null && patient.getEmail() != null && !patient.getEmail().isEmpty()) {
                     email = patient.getEmail();
-                    patientName = patient.getName() != null ? patient.getName() : "Patient";
-                    logger.info("📧 Retrieved email for Patient {} ({}): {}", patientId, patientName, email);
-                } else {
-                    logger.warn("⚠️ Patient {} not found or has no email address", patientId);
                 }
-            } else {
-                logger.warn("⚠️ Patient ID is null, cannot retrieve email address");
             }
             
             // Skip sending email if no valid email address found
             if (email == null || email.trim().isEmpty()) {
-                logger.warn("⚠️ No valid email address found for patient {}, skipping notification", patientId);
                 return;
             }
             
@@ -172,9 +178,6 @@ public class NotificationServiceImpl implements NotificationService {
             // Call SMU Lab Notification Service API
             String apiUrl = apiBaseUrl + sendEmailEndpoint;
             
-            logger.info("📤 Sending Email to {} ({}) via {}", email, patientName, apiUrl);
-            logger.debug("📧 Email Request - To: {}, Subject: {}, Message: {}", email, subject, message);
-            
             ResponseEntity<EmailResponse> response = restTemplate.exchange(
                 apiUrl,
                 HttpMethod.POST,
@@ -183,23 +186,10 @@ public class NotificationServiceImpl implements NotificationService {
             );
             
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                EmailResponse emailResponse = response.getBody();
-                String apiStatus = emailResponse.getStatus();
-                boolean ok = apiStatus != null && apiStatus.trim().equalsIgnoreCase("Email Sent");
-                logger.info("📬 Email API Response: status={}", apiStatus);
-
-                if (ok) {
-                    logger.info("✅ Email sent successfully to Patient {} ({}) at {}", 
-                        patientId, patientName, email);
-                } else {
-                    logger.warn("⚠️ Email API indicated failure. status={}", apiStatus);
-                }
-            } else {
-                logger.error("❌ Email API returned non-2xx status: {}", response.getStatusCode());
+                // Email sent successfully
             }
             
         } catch (Exception e) {
-            logger.error("❌ Failed to send Email to Patient: {}", e.getMessage(), e);
             // Don't throw exception - notification failure shouldn't break queue operations
         }
     }

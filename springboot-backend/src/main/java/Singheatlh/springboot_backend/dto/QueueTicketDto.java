@@ -21,4 +21,5 @@ public class QueueTicketDto {
     private Integer queueNumber;
     private Boolean isFastTracked;
     private String fastTrackReason;
+    private Integer ticketNumberForDay;
 }

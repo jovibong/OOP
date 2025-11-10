@@ -6,10 +6,10 @@ import { QUEUE_CONFIG } from '../../config/queueConfig';
 const NowServingPage = () => {
   const { userProfile } = useAuth();
   const [doctors, setDoctors] = useState([]);
-  const [servingData, setServingData] = useState({}); // { [doctorId]: { ticketId, queueTicket, loading, error } }
+  const [servingData, setServingData] = useState({}); // { [doctorId]: { ticketNumberForDay, queueTicket, loading, error } }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const previousTicketIds = useRef({}); // Track previous ticket IDs to detect changes
+  const previousTicketNumbers = useRef({}); // Track previous ticket numbers for day to detect changes
   const audioContext = useRef(null);
   const soundInitialized = useRef(false);
 
@@ -143,13 +143,13 @@ const NowServingPage = () => {
 
       if (!currentTicketId || currentTicketId === 0) {
         // No one is currently being served
-        // Update previous ticket ID to 0
-        previousTicketIds.current[doctorId] = 0;
+        // Update previous ticket number to 0
+        previousTicketNumbers.current[doctorId] = 0;
         
         setServingData((prev) => ({
           ...prev,
           [doctorId]: {
-            ticketId: 0,
+            ticketNumberForDay: 0,
             queueTicket: null,
             loading: false,
             error: null,
@@ -161,20 +161,21 @@ const NowServingPage = () => {
       // Fetch full queue ticket details
       const ticketResponse = await apiClient.get(`/api/queue/ticket/${currentTicketId}`);
       const queueTicket = ticketResponse?.data;
+      const currentTicketNumberForDay = queueTicket?.ticketNumberForDay || 0;
 
-      // Check if ticket ID changed
-      const previousTicketId = previousTicketIds.current[doctorId];
+      // Check if ticket number changed
+      const previousTicketNumber = previousTicketNumbers.current[doctorId];
       
       // Play sound if:
       // 1. Previous was 0 or undefined (no one being served) and now there's a ticket
       // 2. Previous ticket exists and changed to a different ticket
       const hasChanged = (
-        ((previousTicketId === 0 || previousTicketId === undefined) && currentTicketId > 0) ||
-        (previousTicketId !== undefined && previousTicketId > 0 && previousTicketId !== currentTicketId)
+        ((previousTicketNumber === 0 || previousTicketNumber === undefined) && currentTicketNumberForDay > 0) ||
+        (previousTicketNumber !== undefined && previousTicketNumber > 0 && previousTicketNumber !== currentTicketNumberForDay)
       );
 
-      // Update previous ticket ID
-      previousTicketIds.current[doctorId] = currentTicketId;
+      // Update previous ticket number
+      previousTicketNumbers.current[doctorId] = currentTicketNumberForDay;
 
       // Play sound if ticket changed
       if (hasChanged) {
@@ -184,7 +185,7 @@ const NowServingPage = () => {
       setServingData((prev) => ({
         ...prev,
         [doctorId]: {
-          ticketId: currentTicketId,
+          ticketNumberForDay: currentTicketNumberForDay,
           queueTicket,
           loading: false,
           error: null,
@@ -293,7 +294,7 @@ const NowServingPage = () => {
               <div className="row g-4 justify-content-center">
                 {doctors.slice(0, QUEUE_CONFIG.MAX_VISIBLE_DOCTORS).map((doctor, index) => {
                   const serving = servingData[doctor.doctorId];
-                  const isServing = serving?.ticketId && serving?.ticketId !== 0;
+                  const isServing = serving?.ticketNumberForDay && serving?.ticketNumberForDay !== 0;
                   const roomNumber = index + 1; // Generate room number starting from 1
 
                   return (
@@ -342,7 +343,7 @@ const NowServingPage = () => {
                             ) : (
                               <div className="py-4">
                                 <h1 className="fw-bold text-success mb-0" style={{ fontSize: '8rem', letterSpacing: '0.1em' }}>
-                                  {String(serving.ticketId).padStart(QUEUE_CONFIG.TICKET_ID_PADDING_LENGTH, '0')}
+                                  {String(serving.ticketNumberForDay).padStart(QUEUE_CONFIG.TICKET_ID_PADDING_LENGTH, '0')}
                                 </h1>
                               </div>
                             )}

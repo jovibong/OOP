@@ -126,11 +126,20 @@ public class QueueServiceImpl implements QueueService {
                 appointment.getDoctorId(), now);
             Integer newQueueNumber = (maxQueueNumber == null) ? INITIAL_QUEUE_NUMBER : maxQueueNumber + QUEUE_DECREMENT;
 
+            // Generate ticket_number_for_day (resets daily per clinic)
+            Integer clinicId = appointment.getDoctor() != null ? appointment.getDoctor().getClinicId() : null;
+            Integer maxTicketNumberForDay = null;
+            if (clinicId != null) {
+                maxTicketNumberForDay = queueTicketRepository.findMaxTicketNumberForDayByClinicAndDate(clinicId, now);
+            }
+            Integer newTicketNumberForDay = (maxTicketNumberForDay == null) ? 1 : maxTicketNumberForDay + 1;
+
             QueueTicket queueTicket = new QueueTicket(
                 appointmentId,
                 now,
                 newQueueNumber
             );
+            queueTicket.setTicketNumberForDay(newTicketNumberForDay);
             
             if (newQueueNumber == FIRST_POSITION) {
                 queueTicket.setStatus(QueueStatus.CALLED);

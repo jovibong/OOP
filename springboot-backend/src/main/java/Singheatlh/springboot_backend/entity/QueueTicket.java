@@ -51,6 +51,9 @@ public class QueueTicket {
     @Column(name = "fast_track_reason")
     private String fastTrackReason;
     
+    @Column(name = "ticket_number_for_day")
+    private Integer ticketNumberForDay;
+    
     // Relationship with Appointment (EAGER fetch to access related data)
     @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "appointment_id", insertable = false, updatable = false)

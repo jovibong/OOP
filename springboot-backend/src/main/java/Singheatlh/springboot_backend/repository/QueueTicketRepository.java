@@ -127,4 +127,13 @@ public interface QueueTicketRepository extends JpaRepository<QueueTicket, Intege
         @Param("date") LocalDateTime date,
         @Param("queueNumber") Integer queueNumber,
         @Param("ticketId") Integer ticketId);
+    
+    // Get the maximum ticket_number_for_day for a clinic on a specific date
+    @Query("SELECT MAX(qt.ticketNumberForDay) FROM QueueTicket qt JOIN qt.appointment a JOIN a.doctor d " +
+           "WHERE d.clinicId = :clinicId " +
+           "AND DATE(qt.checkInTime) = DATE(:date)")
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Integer findMaxTicketNumberForDayByClinicAndDate(
+        @Param("clinicId") Integer clinicId, 
+        @Param("date") LocalDateTime date);
 }

@@ -22,6 +22,7 @@ public class QueueTicketMapper {
         dto.setQueueNumber(queueTicket.getQueueNumber());
         dto.setIsFastTracked(queueTicket.getIsFastTracked());
         dto.setFastTrackReason(queueTicket.getFastTrackReason());
+        dto.setTicketNumberForDay(queueTicket.getTicketNumberForDay());
         
         return dto;
     }
