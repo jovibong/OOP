@@ -1,0 +1,201 @@
+@startuml Java_Class_Diagram
+!theme plain
+' Set diagram properties
+scale 1.5
+skinparam backgroundColor #FEFEFE
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #333333
+skinparam arrowColor #333333
+skinparam arrowThickness 2
+skinparam classAttributeIconSize 0
+
+' ============================================
+' ENUMS
+' ============================================
+
+enum Role {
+    P (PATIENT)
+    C (CLINIC_STAFF)
+    S (SYSTEM_ADMINISTRATOR)
+}
+
+enum AppointmentStatus {
+    Upcoming
+    Missed
+    Completed
+    Ongoing
+    Cancelled
+}
+
+enum ScheduleType {
+    AVAILABLE
+    UNAVAILABLE
+}
+
+' ============================================
+' BASE ENTITY & INHERITANCE HIERARCHY
+' ============================================
+
+class User {
+    - userId: UUID (PK)
+    - name: String
+    - email: String (Unique)
+    - telephoneNumber: String
+    - role: Role
+    - clinicId: Integer
+    --
+    + getId(): UUID
+    + getName(): String
+    + setName(String): void
+}
+
+User --> Role: uses >
+
+class Patient {
+    - appointments: List<Appointment>
+    --
+    + getAppointments(): List<Appointment>
+    + setAppointments(List<Appointment>): void
+}
+
+class ClinicStaff {
+    - clinic: Clinic
+    --
+    + getClinic(): Clinic
+    + setClinic(Clinic): void
+}
+
+class SystemAdministrator {
+}
+
+Patient --|> User: extends (DiscriminatorValue: "P")
+ClinicStaff --|> User: extends (DiscriminatorValue: "C")
+SystemAdministrator --|> User: extends (DiscriminatorValue: "S")
+
+' ============================================
+' CORE ENTITIES
+' ============================================
+
+class Clinic {
+    - clinicId: Integer (PK)
+    - type: String
+    - name: String
+    - address: String
+    - telephoneNumber: String
+    - openingHours: LocalTime
+    - closingHours: LocalTime
+    - doctors: List<Doctor>
+    --
+    + getClinicId(): Integer
+    + getName(): String
+    + setName(String): void
+    + getDoctors(): List<Doctor>
+}
+
+class Doctor {
+    - doctorId: String (PK)
+    - name: String
+    - clinicId: Integer (FK)
+    - appointmentDurationInMinutes: Integer
+    - clinic: Clinic
+    --
+    + getDoctorId(): String
+    + getName(): String
+    + setName(String): void
+    + getClinic(): Clinic
+    + getAppointmentDuration(): Integer
+}
+
+class Appointment {
+    - appointmentId: String (PK)
+    - patientId: UUID (FK)
+    - doctorId: String (FK)
+    - startDatetime: LocalDateTime
+    - endDatetime: LocalDateTime
+    - status: AppointmentStatus
+    - cancellationReason: String
+    - cancelledBy: UUID
+    - cancelledAt: LocalDateTime
+    - patient: Patient
+    - doctor: Doctor
+    --
+    + getAppointmentId(): String
+    + getStatus(): AppointmentStatus
+    + setStatus(AppointmentStatus): void
+    + getPatient(): Patient
+    + getDoctor(): Doctor
+    + cancel(reason: String, cancelledBy: UUID): void
+}
+
+class Schedule {
+    - scheduleId: String (PK)
+    - doctorId: String (FK)
+    - startDatetime: LocalDateTime
+    - endDatetime: LocalDateTime
+    - type: ScheduleType
+    - doctor: Doctor
+    --
+    + getScheduleId(): String
+    + getType(): ScheduleType
+    + setType(ScheduleType): void
+    + getDoctor(): Doctor
+}
+
+class MedicalSummary {
+    - summaryId: String (PK)
+    - appointmentId: String (FK)
+    - treatmentSummary: String
+    --
+    + getSummaryId(): String
+    + getTreatmentSummary(): String
+    + setTreatmentSummary(String): void
+}
+
+' ============================================
+' RELATIONSHIPS
+' ============================================
+
+Clinic "1" --> "*" Doctor: has
+Doctor "1" --> "*" Schedule: has
+Doctor "1" --> "*" Appointment: has
+Patient "1" --> "*" Appointment: makes
+Appointment --> AppointmentStatus: uses >
+Schedule --> ScheduleType: uses >
+ClinicStaff "many" --> "1" Clinic: works at
+MedicalSummary --> Appointment: references
+
+' ============================================
+' NOTES
+' ============================================
+
+note right of User
+    Base entity with SINGLE_TABLE inheritance strategy.
+    Discriminator column: "role"
+    All user types stored in "user_profile" table
+end note
+
+note right of Doctor
+    Each doctor belongs to exactly one clinic
+    Manages schedules and appointments
+    Appointment duration is configurable per doctor
+end note
+
+note right of Appointment
+    Tracks patient appointments with doctors
+    Supports cancellation with reason tracking
+    Status managed through AppointmentStatus enum
+end note
+
+note right of Schedule
+    Represents doctor availability periods
+    Unique constraint on (doctor_id, start_datetime, end_datetime)
+    Can be AVAILABLE or UNAVAILABLE
+end note
+
+note right of MedicalSummary
+    Medical record for each appointment
+    Stores treatment summary and notes
+    Linked to appointment by appointmentId
+end note
+
+@enduml
