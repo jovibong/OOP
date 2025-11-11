@@ -3,7 +3,6 @@ package Singheatlh.springboot_backend.service.impl;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -17,23 +16,33 @@ import Singheatlh.springboot_backend.mapper.AppointmentMapper;
 import Singheatlh.springboot_backend.repository.AppointmentRepository;
 import Singheatlh.springboot_backend.service.AppointmentService;
 import Singheatlh.springboot_backend.strategy.AppointmentStrategyFactory;
+import Singheatlh.springboot_backend.strategy.cancellation.CancellationContext;
+import Singheatlh.springboot_backend.strategy.cancellation.CancellationStrategyFactory;
+import Singheatlh.springboot_backend.strategy.reschedule.RescheduleContext;
+import Singheatlh.springboot_backend.strategy.reschedule.RescheduleStrategyFactory;
 import Singheatlh.springboot_backend.util.StreamMappingHelper;
 
 @Service
 @Transactional
 public class AppointmentServiceImpl implements AppointmentService {
-    
+
     private final AppointmentRepository appointmentRepository;
     private final AppointmentMapper appointmentMapper;
     private final AppointmentStrategyFactory strategyFactory;
+    private final CancellationStrategyFactory cancellationFactory;
+    private final RescheduleStrategyFactory rescheduleFactory;
 
     @Autowired
     public AppointmentServiceImpl(AppointmentRepository appointmentRepository,
                                  AppointmentMapper appointmentMapper,
-                                 AppointmentStrategyFactory strategyFactory) {
+                                 AppointmentStrategyFactory strategyFactory,
+                                 CancellationStrategyFactory cancellationFactory,
+                                 RescheduleStrategyFactory rescheduleFactory) {
         this.appointmentRepository = appointmentRepository;
         this.appointmentMapper = appointmentMapper;
         this.strategyFactory = strategyFactory;
+        this.cancellationFactory = cancellationFactory;
+        this.rescheduleFactory = rescheduleFactory;
     }
     
     @Override
@@ -79,117 +88,49 @@ public class AppointmentServiceImpl implements AppointmentService {
     public void cancelAppointment(String appointmentId) {
         Appointment appointment = appointmentRepository.findById(appointmentId)
             .orElseThrow(() -> new RuntimeException("Appointment not found with id: " + appointmentId));
-        
-        // Check if appointment is at least 24 hours away
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime appointmentTime = appointment.getStartDatetime();
-        // If appointment already in the past, disallow cancellation with a clear message
-        if (appointmentTime.isBefore(now)) {
-            throw new IllegalStateException("Cannot cancel past appointments");
-        }
 
-        if (appointmentTime.isBefore(now.plusHours(24))) {
-            throw new IllegalArgumentException("Cannot cancel appointments less than 24 hours in advance");
-        }
-        
-        // Update appointment status to Cancelled
-        appointment.setStatus(AppointmentStatus.Cancelled);
-        appointmentRepository.save(appointment);
+        // Build cancellation context for patient
+        CancellationContext context = CancellationContext.builder()
+            .isStaff(false)
+            .cancelledBy(appointment.getPatientId())
+            .now(LocalDateTime.now())
+            .build();
+
+        // Delegate to strategy pattern
+        cancellationFactory.getStrategy(context).cancel(appointment, context);
     }
 
     @Override
     public void cancelAppointmentByStaff(String appointmentId, UUID staffId, String reason) {
-        // Validate reason is provided
-        if (reason == null || reason.trim().isEmpty()) {
-            throw new IllegalArgumentException("Cancellation reason is required for staff cancellations");
-        }
-
-        // Retrieve appointment
         Appointment appointment = appointmentRepository.findById(appointmentId)
             .orElseThrow(() -> new RuntimeException("Appointment not found with id: " + appointmentId));
 
-        // Staff can cancel anytime (no 24-hour restriction)
-        // Update appointment status to Cancelled
-        appointment.setStatus(AppointmentStatus.Cancelled);
+        // Build cancellation context for staff
+        CancellationContext context = CancellationContext.builder()
+            .isStaff(true)
+            .cancelledBy(staffId)
+            .reason(reason)
+            .now(LocalDateTime.now())
+            .build();
 
-        // Record cancellation metadata
-        appointment.setCancellationReason(reason);
-        appointment.setCancelledBy(staffId);
-        appointment.setCancelledAt(LocalDateTime.now());
-
-        appointmentRepository.save(appointment);
+        // Delegate to strategy pattern
+        cancellationFactory.getStrategy(context).cancel(appointment, context);
     }
 
     @Override
     public AppointmentDto rescheduleAppointment(String appointmentId, LocalDateTime newDateTime) {
         Appointment appointment = appointmentRepository.findById(appointmentId)
             .orElseThrow(() -> new RuntimeException("Appointment not found with id: " + appointmentId));
-        
-        // Check if appointment is at least 24 hours away
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime appointmentTime = appointment.getStartDatetime();
-        
-        if (appointmentTime.isBefore(now.plusHours(24))) {
-            throw new IllegalArgumentException("Cannot reschedule appointments less than 24 hours in advance");
-        }
-        
-        // Validate new time is in the future
-        if (newDateTime.isBefore(LocalDateTime.now())) {
-            throw new IllegalArgumentException("New appointment time cannot be in the past");
-        }
-        
-        // Validate appointment is not for today (must be at least next day)
-        LocalDateTime today = LocalDateTime.now().toLocalDate().atStartOfDay();
-        LocalDateTime tomorrow = today.plusDays(1);
-        if (newDateTime.isBefore(tomorrow)) {
-            throw new IllegalArgumentException("Appointments must be rescheduled to at least one day in advance. Please select a date from tomorrow onwards.");
-        }
-        
-        // Check if patient already has an appointment on the new date (excluding current appointment)
-        LocalDateTime startOfDay = newDateTime.toLocalDate().atStartOfDay();
-        LocalDateTime endOfDay = startOfDay.plusDays(1).minusSeconds(1);
-        List<Appointment> patientAppointmentsOnDay = appointmentRepository
-            .findByPatientIdAndStartDatetimeBetween(appointment.getPatientId(), startOfDay, endOfDay)
-            .stream()
-            .filter(apt -> !apt.getAppointmentId().equals(appointmentId)) // Exclude current appointment
-            .filter(apt -> apt.getStatus() == AppointmentStatus.Upcoming || apt.getStatus() == AppointmentStatus.Ongoing)
-            .collect(Collectors.toList());
-        
-        if (!patientAppointmentsOnDay.isEmpty()) {
-            throw new IllegalArgumentException("You already have an appointment scheduled on this day. Please choose a different date.");
-        }
-        
-        // Calculate new end time (assume same duration)
-        long durationMinutes = java.time.Duration.between(
-            appointment.getStartDatetime(), 
-            appointment.getEndDatetime()
-        ).toMinutes();
-        LocalDateTime newEndTime = newDateTime.plusMinutes(durationMinutes);
-        
-        // Check for conflicts with the new time
-        List<Appointment> conflicts = appointmentRepository
-            .findByDoctorIdAndStartDatetimeBetween(
-                appointment.getDoctorId(),
-                newDateTime.minusMinutes(30),
-                newEndTime
-            )
-            .stream()
-            .filter(apt -> apt.getStatus() == AppointmentStatus.Upcoming || apt.getStatus() == AppointmentStatus.Ongoing)
-            .collect(Collectors.toList());
-        
-        // Remove current appointment from conflicts
-        conflicts.removeIf(a -> a.getAppointmentId().equals(appointmentId));
-        
-        if (!conflicts.isEmpty()) {
-            throw new IllegalArgumentException("Doctor is not available at the requested time");
-        }
-        
-        appointment.setStartDatetime(newDateTime);
-        appointment.setEndDatetime(newEndTime);
-        appointment.setStatus(AppointmentStatus.Upcoming);
-        Appointment updatedAppointment = appointmentRepository.save(appointment);
 
-        return appointmentMapper.toDto(updatedAppointment);
+        // Build reschedule context for patient
+        RescheduleContext context = RescheduleContext.builder()
+            .isStaff(false)
+            .newDateTime(newDateTime)
+            .now(LocalDateTime.now())
+            .build();
+
+        // Delegate to strategy pattern
+        return rescheduleFactory.getStrategy(context).reschedule(appointment, context);
     }
 
     @Override
@@ -197,45 +138,15 @@ public class AppointmentServiceImpl implements AppointmentService {
         Appointment appointment = appointmentRepository.findById(appointmentId)
             .orElseThrow(() -> new RuntimeException("Appointment not found with id: " + appointmentId));
 
-        // Staff can reschedule anytime (no 24-hour restriction)
-        // Staff can reschedule to same-day (no tomorrow restriction)
+        // Build reschedule context for staff
+        RescheduleContext context = RescheduleContext.builder()
+            .isStaff(true)
+            .newDateTime(newDateTime)
+            .now(LocalDateTime.now())
+            .build();
 
-        // Validate new time is in the future
-        if (newDateTime.isBefore(LocalDateTime.now())) {
-            throw new IllegalArgumentException("New appointment time cannot be in the past");
-        }
-
-        // Calculate new end time (assume same duration)
-        long durationMinutes = java.time.Duration.between(
-            appointment.getStartDatetime(),
-            appointment.getEndDatetime()
-        ).toMinutes();
-        LocalDateTime newEndTime = newDateTime.plusMinutes(durationMinutes);
-
-        // Check for conflicts with the new time
-        List<Appointment> conflicts = appointmentRepository
-            .findByDoctorIdAndStartDatetimeBetween(
-                appointment.getDoctorId(),
-                newDateTime.minusMinutes(30),
-                newEndTime
-            )
-            .stream()
-            .filter(apt -> apt.getStatus() == AppointmentStatus.Upcoming || apt.getStatus() == AppointmentStatus.Ongoing)
-            .collect(Collectors.toList());
-
-        // Remove current appointment from conflicts
-        conflicts.removeIf(a -> a.getAppointmentId().equals(appointmentId));
-
-        if (!conflicts.isEmpty()) {
-            throw new IllegalArgumentException("Doctor is not available at the requested time");
-        }
-
-        appointment.setStartDatetime(newDateTime);
-        appointment.setEndDatetime(newEndTime);
-        appointment.setStatus(AppointmentStatus.Upcoming);
-        Appointment updatedAppointment = appointmentRepository.save(appointment);
-
-        return appointmentMapper.toDto(updatedAppointment);
+        // Delegate to strategy pattern
+        return rescheduleFactory.getStrategy(context).reschedule(appointment, context);
     }
 
     // ========== Clinic Staff Methods ==========
