@@ -1,13 +1,19 @@
 @startuml Java_Class_Diagram
 !theme plain
-' Set diagram properties
-scale 1.5
+
+' Force standard UML visibility symbols (- + # ~)
+skinparam classAttributeIconSize 0
+hide circle
+skinparam circledCharacterRadius 0
+
+' Clean styling
 skinparam backgroundColor #FEFEFE
 skinparam classBackgroundColor #FFFFFF
 skinparam classBorderColor #333333
 skinparam arrowColor #333333
 skinparam arrowThickness 2
-skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
 
 ' ============================================
 ' ENUMS
@@ -21,10 +27,10 @@ enum Role {
 
 enum AppointmentStatus {
     Upcoming
-    Missed
-    Completed
     Ongoing
+    Completed
     Cancelled
+    Missed
 }
 
 enum ScheduleType {
@@ -32,8 +38,16 @@ enum ScheduleType {
     UNAVAILABLE
 }
 
+enum QueueStatus {
+    CHECKED_IN
+    CALLED
+    COMPLETED
+    NO_SHOW
+    FAST_TRACKED
+}
+
 ' ============================================
-' BASE ENTITY & INHERITANCE HIERARCHY
+' USER HIERARCHY (Inheritance)
 ' ============================================
 
 class User {
@@ -43,34 +57,41 @@ class User {
     - telephoneNumber: String
     - role: Role
     - clinicId: Integer
-    --
-    + getId(): UUID
+    __
+    + getUserId(): UUID
     + getName(): String
     + setName(String): void
+    + getEmail(): String
+    + setEmail(String): void
+    + getTelephoneNumber(): String
+    + setTelephoneNumber(String): void
+    + getRole(): Role
+    + getClinicId(): Integer
+    + setClinicId(Integer): void
 }
 
-User --> Role: uses >
-
 class Patient {
-    - appointments: List<Appointment>
-    --
+    __
     + getAppointments(): List<Appointment>
-    + setAppointments(List<Appointment>): void
+    + addAppointment(Appointment): void
 }
 
 class ClinicStaff {
-    - clinic: Clinic
-    --
+    __
     + getClinic(): Clinic
     + setClinic(Clinic): void
 }
 
 class SystemAdministrator {
+    __
+    (no additional methods)
 }
 
-Patient --|> User: extends (DiscriminatorValue: "P")
-ClinicStaff --|> User: extends (DiscriminatorValue: "C")
-SystemAdministrator --|> User: extends (DiscriminatorValue: "S")
+Patient -up-|> User
+ClinicStaff -up-|> User
+SystemAdministrator -up-|> User
+
+User --> Role
 
 ' ============================================
 ' CORE ENTITIES
@@ -84,11 +105,20 @@ class Clinic {
     - telephoneNumber: String
     - openingHours: LocalTime
     - closingHours: LocalTime
-    - doctors: List<Doctor>
-    --
+    __
     + getClinicId(): Integer
+    + getType(): String
+    + setType(String): void
     + getName(): String
     + setName(String): void
+    + getAddress(): String
+    + setAddress(String): void
+    + getTelephoneNumber(): String
+    + setTelephoneNumber(String): void
+    + getOpeningHours(): LocalTime
+    + setOpeningHours(LocalTime): void
+    + getClosingHours(): LocalTime
+    + setClosingHours(LocalTime): void
     + getDoctors(): List<Doctor>
 }
 
@@ -97,13 +127,18 @@ class Doctor {
     - name: String
     - clinicId: Integer (FK)
     - appointmentDurationInMinutes: Integer
-    - clinic: Clinic
-    --
+    __
     + getDoctorId(): String
     + getName(): String
     + setName(String): void
+    + getClinicId(): Integer
+    + setClinicId(Integer): void
+    + getAppointmentDurationInMinutes(): Integer
+    + setAppointmentDurationInMinutes(Integer): void
     + getClinic(): Clinic
-    + getAppointmentDuration(): Integer
+    + setClinic(Clinic): void
+    + getSchedules(): List<Schedule>
+    + getAppointments(): List<Appointment>
 }
 
 class Appointment {
@@ -116,15 +151,26 @@ class Appointment {
     - cancellationReason: String
     - cancelledBy: UUID
     - cancelledAt: LocalDateTime
-    - patient: Patient
-    - doctor: Doctor
-    --
+    __
     + getAppointmentId(): String
+    + getPatientId(): UUID
+    + setPatientId(UUID): void
+    + getDoctorId(): String
+    + setDoctorId(String): void
+    + getStartDatetime(): LocalDateTime
+    + setStartDatetime(LocalDateTime): void
+    + getEndDatetime(): LocalDateTime
+    + setEndDatetime(LocalDateTime): void
     + getStatus(): AppointmentStatus
     + setStatus(AppointmentStatus): void
+    + getCancellationReason(): String
+    + setCancellationReason(String): void
+    + getCancelledBy(): UUID
+    + setCancelledBy(UUID): void
+    + getCancelledAt(): LocalDateTime
+    + setCancelledAt(LocalDateTime): void
     + getPatient(): Patient
     + getDoctor(): Doctor
-    + cancel(reason: String, cancelledBy: UUID): void
 }
 
 class Schedule {
@@ -133,20 +179,65 @@ class Schedule {
     - startDatetime: LocalDateTime
     - endDatetime: LocalDateTime
     - type: ScheduleType
-    - doctor: Doctor
-    --
+    __
     + getScheduleId(): String
+    + getDoctorId(): String
+    + setDoctorId(String): void
+    + getStartDatetime(): LocalDateTime
+    + setStartDatetime(LocalDateTime): void
+    + getEndDatetime(): LocalDateTime
+    + setEndDatetime(LocalDateTime): void
     + getType(): ScheduleType
     + setType(ScheduleType): void
     + getDoctor(): Doctor
+    + setDoctor(Doctor): void
+}
+
+class QueueTicket {
+    - ticketId: Integer (PK, Auto-increment)
+    - appointmentId: String (FK, Unique)
+    - status: QueueStatus
+    - checkInTime: LocalDateTime
+    - queueNumber: Integer
+    - isFastTracked: Boolean
+    - fastTrackReason: String
+    - ticketNumberForDay: Integer
+    - consultationStartTime: LocalDateTime
+    - consultationCompleteTime: LocalDateTime
+    __
+    + getTicketId(): Integer
+    + getAppointmentId(): String
+    + setAppointmentId(String): void
+    + getStatus(): QueueStatus
+    + setStatus(QueueStatus): void
+    + getCheckInTime(): LocalDateTime
+    + setCheckInTime(LocalDateTime): void
+    + getQueueNumber(): Integer
+    + setQueueNumber(Integer): void
+    + getIsFastTracked(): Boolean
+    + setIsFastTracked(Boolean): void
+    + getFastTrackReason(): String
+    + setFastTrackReason(String): void
+    + getTicketNumberForDay(): Integer
+    + setTicketNumberForDay(Integer): void
+    + getConsultationStartTime(): LocalDateTime
+    + setConsultationStartTime(LocalDateTime): void
+    + getConsultationCompleteTime(): LocalDateTime
+    + setConsultationCompleteTime(LocalDateTime): void
+    + getAppointment(): Appointment
+    + getClinicId(): Integer
+    + getDoctorId(): String
+    + getPatientId(): UUID
 }
 
 class MedicalSummary {
     - summaryId: String (PK)
     - appointmentId: String (FK)
     - treatmentSummary: String
-    --
+    __
     + getSummaryId(): String
+    + getAppointmentId(): String
+    + setAppointmentId(String): void
     + getTreatmentSummary(): String
     + setTreatmentSummary(String): void
 }
@@ -155,47 +246,74 @@ class MedicalSummary {
 ' RELATIONSHIPS
 ' ============================================
 
-Clinic "1" --> "*" Doctor: has
-Doctor "1" --> "*" Schedule: has
-Doctor "1" --> "*" Appointment: has
-Patient "1" --> "*" Appointment: makes
-Appointment --> AppointmentStatus: uses >
-Schedule --> ScheduleType: uses >
-ClinicStaff "many" --> "1" Clinic: works at
-MedicalSummary --> Appointment: references
+Clinic "1" -- "*" Doctor : has >
+Doctor "1" -- "*" Schedule : has >
+Doctor "1" -- "*" Appointment : has >
+Patient "1" -- "*" Appointment : makes >
+Appointment "1" -- "0..1" QueueTicket : has >
+Appointment "1" -- "0..1" MedicalSummary : has >
+ClinicStaff "*" -- "1" Clinic : works at >
+
+Appointment --> AppointmentStatus
+Schedule --> ScheduleType
+QueueTicket --> QueueStatus
 
 ' ============================================
 ' NOTES
 ' ============================================
 
 note right of User
-    Base entity with SINGLE_TABLE inheritance strategy.
-    Discriminator column: "role"
-    All user types stored in "user_profile" table
-end note
+    **SINGLE_TABLE Inheritance Strategy**
 
-note right of Doctor
-    Each doctor belongs to exactly one clinic
-    Manages schedules and appointments
-    Appointment duration is configurable per doctor
+    All user types stored in ONE table: "user_profile"
+    Discriminator column: "role" (P/C/S)
+
+    **clinicId field:**
+    - NOT NULL for ClinicStaff (role='C')
+    - NULL for Patient (role='P')
+    - NULL for SystemAdministrator (role='S')
+
+    JPA automatically handles this via discriminator.
 end note
 
 note right of Appointment
-    Tracks patient appointments with doctors
-    Supports cancellation with reason tracking
-    Status managed through AppointmentStatus enum
+    **Central Entity**
+
+    Links Patient, Doctor, QueueTicket, and MedicalSummary.
+    Tracks cancellation with reason and timestamp.
+    Status lifecycle: Upcoming → Ongoing → Completed/Cancelled/Missed
+end note
+
+note right of QueueTicket
+    **Queue Management**
+
+    One-to-one relationship with Appointment.
+    Tracks patient check-in and queue position.
+
+    Flow: CHECKED_IN → CALLED → COMPLETED
+    Alternative: CHECKED_IN → NO_SHOW
+    Fast-track: FAST_TRACKED → COMPLETED
+
+    Unique constraint on appointmentId.
 end note
 
 note right of Schedule
-    Represents doctor availability periods
-    Unique constraint on (doctor_id, start_datetime, end_datetime)
-    Can be AVAILABLE or UNAVAILABLE
+    **Doctor Availability**
+
+    Represents doctor availability periods.
+    Unique constraint: (doctorId, startDatetime, endDatetime)
+
+    Types:
+    - AVAILABLE: Doctor can take appointments
+    - UNAVAILABLE: Doctor on leave/break
 end note
 
 note right of MedicalSummary
-    Medical record for each appointment
-    Stores treatment summary and notes
-    Linked to appointment by appointmentId
+    **Medical Record**
+
+    Stores treatment summary for each appointment.
+    Created after appointment completion.
+    One-to-one with Appointment.
 end note
 
 @enduml
