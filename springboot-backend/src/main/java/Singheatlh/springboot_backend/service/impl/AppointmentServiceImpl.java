@@ -54,10 +54,10 @@ public class AppointmentServiceImpl implements AppointmentService {
 
     /**
      * Convenience method for creating walk-in appointments.
-     * Sets the isWalkIn flag and delegates to createAppointment.
+     * The isWalkIn flag should already be set by the controller/frontend.
+     * This method simply delegates to createAppointment for clarity.
      */
     public AppointmentDto createWalkInAppointment(CreateAppointmentRequest request) {
-        request.setIsWalkIn(true);
         return createAppointment(request);
     }
 

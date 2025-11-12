@@ -191,6 +191,7 @@ const WalkInAppointmentModal = ({ show, onHide, onSuccess, clinicId }) => {
                 setSelectedDate={setSelectedDate}
                 setSelectedTime={setSelectedTime}
                 onSlotSelected={handleSlotSelected}
+                isWalkIn={true}
               />
             </div>
           )}

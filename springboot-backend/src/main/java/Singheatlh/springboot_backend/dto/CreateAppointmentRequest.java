@@ -22,5 +22,5 @@ public class CreateAppointmentRequest {
 
     private LocalDateTime endDatetime;  // Added
 
-    private Boolean isWalkIn;  // Flag to indicate walk-in appointment (default: false/null for regular)
+    private boolean isWalkIn;  // Flag to indicate walk-in appointment (defaults to false for regular appointments)
 }

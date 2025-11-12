@@ -29,11 +29,12 @@ public class WalkInAppointmentStrategy extends AbstractAppointmentStrategy {
     }
 
     /**
-     * Sets the isWalkIn flag to true before validation.
-     * This allows FutureTimeValidationRule to skip the future time check.
+     * No preprocessing needed for walk-in appointments.
+     * The isWalkIn flag is already set by the controller/frontend and verified by AppointmentStrategyFactory.
+     * All validation rules check this flag and skip their checks for walk-ins.
      */
     @Override
     protected void preprocessRequest(CreateAppointmentRequest request) {
-        request.setIsWalkIn(true);
+        // Walk-in flag is already set; no preprocessing needed
     }
 }
