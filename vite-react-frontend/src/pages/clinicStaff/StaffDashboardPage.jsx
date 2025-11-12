@@ -9,8 +9,10 @@ const StaffDashboardPage = () => {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeFilter, setActiveFilter] = useState('all'); // all, today, upcoming, status, dateRange
+  const [activeFilter, setActiveFilter] = useState('today'); // all, today, upcoming, status, dateRange, doctor
   const [selectedStatus, setSelectedStatus] = useState('Upcoming');
+  const [selectedDoctorId, setSelectedDoctorId] = useState('');
+  const [doctors, setDoctors] = useState([]);
   const [dateRange, setDateRange] = useState({
     startDate: '',
     endDate: '',
@@ -18,6 +20,20 @@ const StaffDashboardPage = () => {
   const [showWalkInModal, setShowWalkInModal] = useState(false);
 
   const clinicId = userProfile?.clinicId;
+
+  // Fetch doctors for the clinic
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      if (!clinicId) return;
+      try {
+        const response = await apiClient.get(`/api/doctor/clinic/${clinicId}`);
+        setDoctors(response.data || []);
+      } catch (err) {
+        console.error('Error fetching doctors:', err);
+      }
+    };
+    fetchDoctors();
+  }, [clinicId]);
 
   // Fetch appointments based on active filter
   const fetchAppointments = useCallback(async () => {
@@ -42,6 +58,20 @@ const StaffDashboardPage = () => {
         case 'status':
           response = await apiClient.get(`/api/appointments/clinic/${clinicId}/status/${selectedStatus}`);
           break;
+        case 'doctor':
+          if (selectedDoctorId) {
+            // Fetch all clinic appointments and filter by doctor on frontend
+            response = await apiClient.get(`/api/appointments/clinic/${clinicId}`);
+            // Filter appointments by selected doctor
+            response.data = response.data.filter(apt => 
+              apt.doctorId === selectedDoctorId || apt.doctor?.doctorId === selectedDoctorId
+            );
+          } else {
+            setError('Please select a doctor');
+            setLoading(false);
+            return;
+          }
+          break;
         case 'dateRange':
           if (dateRange.startDate && dateRange.endDate) {
             response = await apiClient.get(
@@ -64,7 +94,7 @@ const StaffDashboardPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [clinicId, activeFilter, selectedStatus, dateRange]);
+  }, [clinicId, activeFilter, selectedStatus, selectedDoctorId, dateRange]);
 
   useEffect(() => {
     if (userProfile?.clinicId) {
@@ -79,6 +109,11 @@ const StaffDashboardPage = () => {
   const handleStatusChange = (status) => {
     setSelectedStatus(status);
     setActiveFilter('status');
+  };
+
+  const handleDoctorChange = (doctorId) => {
+    setSelectedDoctorId(doctorId);
+    setActiveFilter('doctor');
   };
 
   const handleDateRangeSubmit = (e) => {
@@ -101,6 +136,10 @@ const StaffDashboardPage = () => {
         return 'Upcoming Appointments';
       case 'status':
         return `${selectedStatus} Appointments`;
+      case 'doctor': {
+        const doctor = doctors.find(d => d.doctorId === selectedDoctorId);
+        return doctor ? `Dr. ${doctor.name}'s Appointments` : 'Doctor Appointments';
+      }
       case 'dateRange':
         return 'Date Range';
       default:
@@ -200,6 +239,35 @@ const StaffDashboardPage = () => {
                       <span className="badge bg-warning text-dark me-2">Missed</span>
                     </button>
                   </li>
+                </ul>
+              </li>
+              <li className="nav-item dropdown">
+                <button
+                  className={`nav-link dropdown-toggle ${activeFilter === 'doctor' ? 'active' : ''}`}
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                >
+                  <i className="bi bi-person-badge me-2"></i>
+                  By Doctor
+                </button>
+                <ul className="dropdown-menu" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                  {doctors.length === 0 ? (
+                    <li>
+                      <span className="dropdown-item text-muted">No doctors found</span>
+                    </li>
+                  ) : (
+                    doctors.map((doctor) => (
+                      <li key={doctor.doctorId}>
+                        <button 
+                          className="dropdown-item" 
+                          onClick={() => handleDoctorChange(doctor.doctorId)}
+                        >
+                          <i className="bi bi-person-circle me-2"></i>
+                          {doctor.name}
+                        </button>
+                      </li>
+                    ))
+                  )}
                 </ul>
               </li>
               <li className="nav-item">
