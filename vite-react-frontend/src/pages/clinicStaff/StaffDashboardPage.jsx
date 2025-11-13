@@ -138,7 +138,7 @@ const StaffDashboardPage = () => {
         return `${selectedStatus} Appointments`;
       case 'doctor': {
         const doctor = doctors.find(d => d.doctorId === selectedDoctorId);
-        return doctor ? `Dr. ${doctor.name}'s Appointments` : 'Doctor Appointments';
+        return doctor ? `${doctor.name}'s Appointments` : 'Doctor Appointments';
       }
       case 'dateRange':
         return 'Date Range';
