@@ -18,14 +18,12 @@ public class NotificationMessageBuilderImpl implements NotificationMessageBuilde
             "Ticket Number: %s\n\n" +
             "Dear %s,\n\n" +
             "%s\n\n" +
-            "Doctor: %s\n\n" +
             "You are currently 3 patients away from being called. " +
             "Please proceed closer to the consultation room.\n\n" +
             "Thank you for your patience.",
             context.getTicketNumberForDay(),
             context.getPatientName(),
-            context.getAppointmentDetails(),
-            context.getDoctorName()
+            context.getAppointmentDetails()
         );
     }
     

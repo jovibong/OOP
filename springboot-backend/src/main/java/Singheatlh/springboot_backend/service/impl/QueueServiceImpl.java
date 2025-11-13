@@ -35,7 +35,6 @@ public class QueueServiceImpl implements QueueService {
     private static final int FIRST_POSITION = 1;
     private static final int SECOND_POSITION = 2;
     private static final int FOURTH_POSITION = 4;
-    private static final int NOTIFICATION_POSITIONS_AHEAD = 3;
     private static final int EMPTY_QUEUE_NUMBER = 0;
     
     // Per-doctor locks to prevent race conditions
@@ -151,17 +150,17 @@ public class QueueServiceImpl implements QueueService {
      * Send check-in confirmation and process queue notifications
      */
     private void sendCheckInNotifications(QueueTicket queueTicket, Integer queueNumber, String doctorId) {
-        if (notificationService != null) {
+
+        
+        // Process queue notifications if patient is in the first few positions
+        if (queueNumber == FIRST_POSITION || queueNumber == SECOND_POSITION || queueNumber == FOURTH_POSITION) {
+            processQueueNotifications(doctorId);
+        } else {
             try {
                 notificationService.sendCheckInConfirmationNotification(queueTicket);
             } catch (Exception e) {
                 // Fail silently - notification failure shouldn't break check-in
             }
-        }
-        
-        // Process queue notifications if patient is in the first few positions
-        if (queueNumber == FIRST_POSITION || queueNumber == SECOND_POSITION || queueNumber == FOURTH_POSITION) {
-            processQueueNotifications(doctorId);
         }
     }
 
@@ -534,6 +533,10 @@ public class QueueServiceImpl implements QueueService {
         queueTicket.setQueueNumber(newQueueNumber);
         queueTicket = queueTicketRepository.save(queueTicket);
         
+        // Reload with appointment and doctor eagerly loaded for notification
+        queueTicket = queueTicketRepository.findByIdWithAppointment(queueTicket.getTicketId())
+            .orElse(queueTicket);
+        
         // Send fast-track notification to the patient
         if (notificationService != null) {
             notificationService.sendFastTrackNotification(queueTicket);
@@ -562,14 +565,15 @@ public class QueueServiceImpl implements QueueService {
             return;
         }
         
-        List<QueueTicket> currentlyServing = queueTicketRepository.findCurrentQueueNumberByDoctorIdAndDate(doctorId, today);
+        // Use notification-specific query that eagerly loads appointment and doctor
+        List<QueueTicket> currentlyServing = queueTicketRepository.findCurrentQueueNumberForNotification(doctorId, today);
         for (QueueTicket serving : currentlyServing) {
             if (serving.getStatus() == QueueStatus.CALLED && notificationService != null) {
                 notificationService.sendQueueCalledNotification(serving);
             }
         }
         
-        Integer notify3AwayNumber = currentServingNumber + NOTIFICATION_POSITIONS_AHEAD;
+        Integer notify3AwayNumber = currentServingNumber + (FOURTH_POSITION - FIRST_POSITION);
         queueTicketRepository.findTicketToNotify3Away(doctorId, today, notify3AwayNumber)
             .ifPresent(ticket -> {
                 if (notificationService != null) {
