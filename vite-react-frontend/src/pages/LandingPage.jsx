@@ -1,6 +1,9 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useEffect } from "react";
+import SplineScene from "../components/SplineScene";
+import BackgroundPaths from "../components/BackgroundPaths";
+import Testimonials from "../components/Testimonials";
 
 const LandingPage = () => {
   const { user, userProfile, loading } = useAuth();
@@ -41,10 +44,15 @@ const LandingPage = () => {
     <div className="min-vh-100 bg-light">
       {/* Hero Section */}
       <section
-        className="bg-primary text-white py-5"
-        style={{ minHeight: "70vh" }}
+        className="text-white py-5"
+        style={{
+          minHeight: "70vh",
+          backgroundColor: "#000",
+          position: "relative",
+        }}
       >
-        <div className="container">
+        <BackgroundPaths />
+        <div className="container" style={{ position: "relative", zIndex: 1 }}>
           <div className="row align-items-center min-vh-70">
             <div className="col-lg-6 py-5">
               <h1 className="display-3 fw-bold mb-4">
@@ -76,11 +84,22 @@ const LandingPage = () => {
                 </Link>
               </div>
             </div>
-            <div className="col-lg-6 d-none d-lg-block text-center">
-              <i
-                className="bi bi-hospital"
-                style={{ fontSize: "20rem", opacity: 0.2 }}
-              ></i>
+            <div className="col-lg-6 d-none d-lg-block">
+              <div
+                style={{
+                  height: "500px",
+                  width: "100%",
+                  position: "relative",
+                  borderRadius: "16px",
+                  overflow: "hidden",
+                  boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+                }}
+              >
+                <SplineScene
+                  scene="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode"
+                  className="w-100 h-100"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -102,7 +121,11 @@ const LandingPage = () => {
                 <div className="card-body text-center p-4">
                   <div
                     className="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center mb-4"
-                    style={{ width: "120px", height: "120px", margin: "0 auto" }}
+                    style={{
+                      width: "120px",
+                      height: "120px",
+                      margin: "0 auto",
+                    }}
                   >
                     <i
                       className="bi bi-calendar-check text-primary"
@@ -124,7 +147,11 @@ const LandingPage = () => {
                 <div className="card-body text-center p-4">
                   <div
                     className="rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center mb-4"
-                    style={{ width: "120px", height: "120px", margin: "0 auto" }}
+                    style={{
+                      width: "120px",
+                      height: "120px",
+                      margin: "0 auto",
+                    }}
                   >
                     <i
                       className="bi bi-hospital text-success"
@@ -146,7 +173,11 @@ const LandingPage = () => {
                 <div className="card-body text-center p-4">
                   <div
                     className="rounded-circle bg-info bg-opacity-10 d-flex align-items-center justify-content-center mb-4"
-                    style={{ width: "120px", height: "120px", margin: "0 auto" }}
+                    style={{
+                      width: "120px",
+                      height: "120px",
+                      margin: "0 auto",
+                    }}
                   >
                     <i
                       className="bi bi-clock-history text-info"
@@ -249,6 +280,9 @@ const LandingPage = () => {
           </div>
         </div>
       </section>
+
+      {/* Testimonials Section */}
+      <Testimonials />
 
       {/* CTA Section */}
       <section className="py-5 bg-primary text-white">
