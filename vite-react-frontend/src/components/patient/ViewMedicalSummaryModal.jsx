@@ -11,20 +11,87 @@ const ViewMedicalSummaryModal = ({ show, onHide, appointment, summary, loading }
       style.id = styleId;
       style.textContent = `
         @media print {
+          @page {
+            margin: 1cm;
+            size: A4 portrait;
+          }
+          
+          /* Hide everything on page except modal */
           body * {
             visibility: hidden;
+            height: 0;
+            overflow: hidden;
           }
-          .medical-summary-print, .medical-summary-print * {
+          
+          /* Show only modal content */
+          .modal, .modal * {
             visibility: visible;
+            height: auto;
+            overflow: visible;
           }
-          .medical-summary-print {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
+          
+          /* Position modal for print */
+          .modal {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            background: white !important;
+            display: block !important;
+            height: auto !important;
+            min-height: 0 !important;
+            max-height: none !important;
           }
+          
+          .modal-dialog {
+            max-width: 100% !important;
+            margin: 0 !important;
+            transform: none !important;
+            height: auto !important;
+          }
+          
+          .modal-content {
+            border: none !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            max-height: none !important;
+            height: auto !important;
+          }
+          
+          /* Hide buttons and backdrop */
           .no-print {
+            visibility: hidden !important;
             display: none !important;
+            height: 0 !important;
+          }
+          
+          /* Force single page - make content fit */
+          .modal-body {
+            max-height: none !important;
+            overflow: visible !important;
+            height: auto !important;
+          }
+          
+          .modal-header, .modal-footer {
+            height: auto !important;
+          }
+          
+          /* Prevent page breaks */
+          .modal-content,
+          .card,
+          .card-body {
+            page-break-inside: avoid;
+            page-break-before: auto;
+            page-break-after: avoid;
+          }
+          
+          /* Remove any extra spacing */
+          body {
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          
+          html {
+            height: auto !important;
           }
         }
       `;
@@ -81,7 +148,7 @@ const ViewMedicalSummaryModal = ({ show, onHide, appointment, summary, loading }
       aria-labelledby="medical-summary-title"
     >
       <div className="modal-dialog modal-dialog-centered modal-lg">
-        <div className="modal-content border-0 shadow-lg medical-summary-print" style={{ borderRadius: '12px' }}>
+        <div className="modal-content border-0 shadow-lg" style={{ borderRadius: '12px' }}>
           {/* Header with Medical Document Style */}
           <div className="modal-header border-0 pb-2" style={{ backgroundColor: '#f8f9fa' }}>
             <div className="w-100">
