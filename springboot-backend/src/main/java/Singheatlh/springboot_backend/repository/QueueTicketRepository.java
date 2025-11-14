@@ -18,8 +18,11 @@ import Singheatlh.springboot_backend.entity.enums.QueueStatus;
 @Repository
 public interface QueueTicketRepository extends JpaRepository<QueueTicket, Integer> {
     
-    // Find queue ticket by ID with appointment eagerly loaded
-    @Query("SELECT qt FROM QueueTicket qt LEFT JOIN FETCH qt.appointment WHERE qt.ticketId = :ticketId")
+    // Find queue ticket by ID with appointment AND doctor eagerly loaded (for check-in confirmation)
+    @Query("SELECT qt FROM QueueTicket qt " +
+           "LEFT JOIN FETCH qt.appointment a " +
+           "LEFT JOIN FETCH a.doctor " +
+           "WHERE qt.ticketId = :ticketId")
     Optional<QueueTicket> findByIdWithAppointment(@Param("ticketId") Integer ticketId);
     
     // Find queue ticket by appointment ID (one to one)
@@ -95,8 +98,22 @@ public interface QueueTicketRepository extends JpaRepository<QueueTicket, Intege
         @Param("doctorId") String doctorId, 
         @Param("date") LocalDateTime date);
     
+    @Query("SELECT qt FROM QueueTicket qt " +
+           "JOIN FETCH qt.appointment a " +
+           "LEFT JOIN FETCH a.doctor " +
+           "WHERE a.doctorId = :doctorId " +
+           "AND DATE(qt.checkInTime) = DATE(:date) " +
+           "AND qt.status IN ('CALLED') " +
+           "ORDER BY qt.queueNumber ASC")
+    List<QueueTicket> findCurrentQueueNumberForNotification(
+        @Param("doctorId") String doctorId, 
+        @Param("date") LocalDateTime date);
+    
     // Find queue ticket that needs to be notified (exactly 3 away from current)
-    @Query("SELECT qt FROM QueueTicket qt JOIN qt.appointment a WHERE a.doctorId = :doctorId " +
+    // Uses JOIN FETCH to eagerly load appointment only (doctor info not needed for this notification)
+    @Query("SELECT qt FROM QueueTicket qt " +
+           "JOIN FETCH qt.appointment a " +
+           "WHERE a.doctorId = :doctorId " +
            "AND DATE(qt.checkInTime) = DATE(:date) " +
            "AND qt.status = 'CHECKED_IN' " +
            "AND qt.queueNumber = :targetQueueNumber")
@@ -106,7 +123,11 @@ public interface QueueTicketRepository extends JpaRepository<QueueTicket, Intege
         @Param("targetQueueNumber") Integer targetQueueNumber);
     
     // Find queue tickets that need to be notified (next in line)
-    @Query("SELECT qt FROM QueueTicket qt JOIN qt.appointment a WHERE a.doctorId = :doctorId " +
+    // Uses JOIN FETCH to eagerly load appointment and doctor for notifications
+    @Query("SELECT qt FROM QueueTicket qt " +
+           "JOIN FETCH qt.appointment a " +
+           "LEFT JOIN FETCH a.doctor " +
+           "WHERE a.doctorId = :doctorId " +
            "AND DATE(qt.checkInTime) = DATE(:date) " +
            "AND qt.status = 'CHECKED_IN' " +
            "AND qt.queueNumber = :nextQueueNumber")
