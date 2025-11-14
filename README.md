@@ -50,8 +50,14 @@ cp db/.env.example db/.env && cp springboot-backend/src/main/resources/applicati
 ### Quick Start (Automated)
 
 Ensure that your Docker desktop is active.
+If running locally, ensure that no processes are running locally on port 8080 using
+
+```bash
+netstat -ano | findstr :8080
+```
 
 **Windows:**
+
 ```bash
 # 1. Install dependencies
 npm install
@@ -64,6 +70,7 @@ npm run db:seed
 ```
 
 **macOS/Linux:**
+
 ```bash
 # 1. Install dependencies
 npm install
