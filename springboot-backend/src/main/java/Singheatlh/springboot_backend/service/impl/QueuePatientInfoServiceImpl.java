@@ -46,8 +46,7 @@ public class QueuePatientInfoServiceImpl implements QueuePatientInfoService {
                 patientId = queueTicket.getAppointment().getPatientId();
             }
 
-            // If appointment relation wasn't initialized, look up Appointment directly by
-            // ID
+            // If appointment relation wasn't initialized, look up Appointment directly by id
             if (patientId == null && queueTicket.getAppointmentId() != null) {
                 try {
                     Appointment appt = appointmentRepository.findById(queueTicket.getAppointmentId()).orElse(null);

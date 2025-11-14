@@ -110,7 +110,6 @@ public interface QueueTicketRepository extends JpaRepository<QueueTicket, Intege
         @Param("date") LocalDateTime date);
     
     // Find queue ticket that needs to be notified (exactly 3 away from current)
-    // Uses JOIN FETCH to eagerly load appointment only (doctor info not needed for this notification)
     @Query("SELECT qt FROM QueueTicket qt " +
            "JOIN FETCH qt.appointment a " +
            "WHERE a.doctorId = :doctorId " +
@@ -123,7 +122,6 @@ public interface QueueTicketRepository extends JpaRepository<QueueTicket, Intege
         @Param("targetQueueNumber") Integer targetQueueNumber);
     
     // Find queue tickets that need to be notified (next in line)
-    // Uses JOIN FETCH to eagerly load appointment and doctor for notifications
     @Query("SELECT qt FROM QueueTicket qt " +
            "JOIN FETCH qt.appointment a " +
            "LEFT JOIN FETCH a.doctor " +

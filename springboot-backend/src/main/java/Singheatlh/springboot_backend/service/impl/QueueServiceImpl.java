@@ -65,7 +65,7 @@ public class QueueServiceImpl implements QueueService {
             Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new ResourceNotFoundExecption("Appointment not found with id: " + appointmentId));
             
-            // Get or create lock for this doctor
+            // Get or create lock for this doctor in event of race
             String doctorId = appointment.getDoctorId();
             Object lock = doctorLocks.computeIfAbsent(doctorId, k -> new Object());
             
@@ -83,11 +83,6 @@ public class QueueServiceImpl implements QueueService {
         }
     }
     
-    /**
-     * REFACTORED: Performs check-in operation
-     * Now follows SRP - delegates validation and calculations to specialized services
-     * Much cleaner and easier to maintain
-     */
     private QueueTicketDto performCheckIn(String appointmentId, Appointment appointment) {
         try {
             LocalDateTime now = LocalDateTime.now();
@@ -283,7 +278,7 @@ public class QueueServiceImpl implements QueueService {
             List<QueueTicket> currentlyServing = queueTicketRepository.findCurrentQueueNumberByDoctorIdAndDate(doctorId, today);
             for (QueueTicket serving : currentlyServing) {
                 if (serving.getStatus() == QueueStatus.CALLED) {
-                    // Set consultation completion time
+
                     if (serving.getConsultationCompleteTime() == null) {
                         serving.setConsultationCompleteTime(LocalDateTime.now());
                     }

@@ -27,6 +27,7 @@ public class NotificationMessageBuilderImpl implements NotificationMessageBuilde
         );
     }
     
+    // differnet messages to showcase of DRY (dont repeeat yourself)
     @Override
     public String buildQueueNotificationNextMessage(NotificationContext context) {
         return String.format(

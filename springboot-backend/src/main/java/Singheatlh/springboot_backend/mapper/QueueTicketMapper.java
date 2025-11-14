@@ -8,7 +8,6 @@ import Singheatlh.springboot_backend.entity.QueueTicket;
 @Component
 public class QueueTicketMapper {
     
-    // Simplified mapper to match the minimal QueueTicketDto
     public QueueTicketDto toDto(QueueTicket queueTicket) {
         if (queueTicket == null) {
             return null;
@@ -34,7 +33,6 @@ public class QueueTicketMapper {
             return null;
         }
         
-        // Use simplified constructor (no longer needs clinicId, doctorId, patientId)
         return new QueueTicket(
             dto.getAppointmentId(),
             dto.getCheckInTime(),

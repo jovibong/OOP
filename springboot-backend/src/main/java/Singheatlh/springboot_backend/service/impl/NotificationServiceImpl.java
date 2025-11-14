@@ -154,18 +154,14 @@ public class NotificationServiceImpl implements NotificationService {
                 return;
             }
             
-            // Prepare Email request
             EmailRequest emailRequest = new EmailRequest(email, subject, message);
             
-            // Prepare HTTP headers
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            // Add authentication header if needed
-            // headers.set("Authorization", "Bearer " + apiKey);
             
             HttpEntity<EmailRequest> requestEntity = new HttpEntity<>(emailRequest, headers);
             
-            // Call SMU Lab Notification Service API
+            // Call SMU Lab Notification Service API, thanks prof alan 
             String apiUrl = apiBaseUrl + sendEmailEndpoint;
             
             ResponseEntity<EmailResponse> response = restTemplate.exchange(
